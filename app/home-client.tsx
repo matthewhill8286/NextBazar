@@ -61,7 +61,7 @@ export default function HomeClient() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
+      <section className="bg-linear-to-br from-blue-600 via-indigo-600 to-purple-700 text-white">
         <div className="max-w-7xl mx-auto px-4 py-14 md:py-20 text-center">
           <h1 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
             Buy &amp; Sell Anything in Cyprus
@@ -183,7 +183,7 @@ export default function HomeClient() {
                   key={i}
                   className="bg-white rounded-xl border border-gray-100 overflow-hidden"
                 >
-                  <div className="aspect-[4/3] bg-gray-100 animate-pulse" />
+                  <div className="aspect-4/3 bg-gray-100 animate-pulse" />
                   <div className="p-3.5 space-y-2">
                     <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
                     <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />

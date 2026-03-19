@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Sparkles, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ListingCard from "@/app/components/listing-card";
 
@@ -25,6 +25,8 @@ export default function SearchClient() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiInterpretation, setAiInterpretation] = useState("");
 
   // Load categories & locations once
   useEffect(() => {
@@ -52,28 +54,17 @@ export default function SearchClient() {
       )
       .eq("status", "active");
 
-    if (query) {
-      q = q.textSearch("search_vector", query, {
-        type: "websearch",
-        config: "english",
-      });
-    }
-
+    // Apply category/location filters
     if (categorySlug) {
-      // Get category ID from slug
       const cat = categories.find((c) => c.slug === categorySlug);
-      if (cat) {
-        q = q.eq("category_id", cat.id);
-      }
+      if (cat) q = q.eq("category_id", cat.id);
     }
-
     if (locationSlug) {
       const loc = locations.find((l) => l.slug === locationSlug);
-      if (loc) {
-        q = q.eq("location_id", loc.id);
-      }
+      if (loc) q = q.eq("location_id", loc.id);
     }
 
+    // Sort
     if (sortBy === "price_low") q = q.order("price", { ascending: true });
     else if (sortBy === "price_high")
       q = q.order("price", { ascending: false });
@@ -81,16 +72,92 @@ export default function SearchClient() {
       q = q.order("view_count", { ascending: false });
     else q = q.order("created_at", { ascending: false });
 
-    const { data } = await q.limit(24);
-    setListings(data || []);
+    if (query) {
+      // Try full-text search first
+      const fts = q.textSearch("search_vector", query, {
+        type: "websearch",
+        config: "english",
+      });
+      const { data } = await fts.limit(24);
+
+      if (data && data.length > 0) {
+        setListings(data);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: pattern match (handles partial words, acronyms, short queries)
+      const fallback = supabase
+        .from("listings")
+        .select(`*, categories(name, slug, icon), locations(name, slug)`)
+        .eq("status", "active")
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+
+      // Re-apply category/location filters on fallback
+      if (categorySlug) {
+        const cat = categories.find((c) => c.slug === categorySlug);
+        if (cat) fallback.eq("category_id", cat.id);
+      }
+      if (locationSlug) {
+        const loc = locations.find((l) => l.slug === locationSlug);
+        if (loc) fallback.eq("location_id", loc.id);
+      }
+
+      const { data: fallbackData } = await fallback
+        .order("created_at", { ascending: false })
+        .limit(24);
+      setListings(fallbackData || []);
+    } else {
+      const { data } = await q.limit(24);
+      setListings(data || []);
+    }
     setLoading(false);
   }, [query, categorySlug, locationSlug, sortBy, categories, locations]);
 
+  // Debounce search — wait 300ms after user stops typing
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
-    if (categories.length > 0) {
+    if (categories.length === 0) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      doSearch();
+    }, 300);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [doSearch, categories]);
+
+  async function handleAiSearch() {
+    if (!query.trim()) return;
+    setAiSearching(true);
+    setAiInterpretation("");
+    try {
+      const res = await fetch("/api/ai/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setListings(data.listings || []);
+      setAiInterpretation(data.interpretation || "");
+      // Update filter UI to reflect AI's parsed filters
+      if (data.filters.category_slug) setCategorySlug(data.filters.category_slug);
+      if (data.filters.location_slug) setLocationSlug(data.filters.location_slug);
+    } catch {
+      // Fall back to regular search
       doSearch();
     }
-  }, [doSearch, categories]);
+    setAiSearching(false);
+    setLoading(false);
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAiSearch();
+    }
+  }
 
   const activeCategory = categories.find((c) => c.slug === categorySlug);
   const hasFilters = query || categorySlug || locationSlug;
@@ -103,18 +170,33 @@ export default function SearchClient() {
           <Search className="absolute left-4 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm bg-white"
-            placeholder="Search listings..."
+            className="w-full pl-12 pr-28 py-3.5 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm bg-white"
+            placeholder="Try: &quot;cheap car in Limassol under 10k&quot; or &quot;new iPhone&quot;"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setAiInterpretation(""); }}
+            onKeyDown={handleSearchKeyDown}
             autoFocus
           />
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="absolute right-2 p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
+          <div className="absolute right-2 flex items-center gap-1.5">
+            <button
+              onClick={handleAiSearch}
+              disabled={aiSearching || !query.trim()}
+              className="p-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="AI Smart Search"
+            >
+              {aiSearching ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+            </button>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -202,6 +284,14 @@ export default function SearchClient() {
           >
             Clear all
           </button>
+        </div>
+      )}
+
+      {/* AI interpretation */}
+      {aiInterpretation && (
+        <div className="flex items-center gap-2 bg-indigo-50 text-indigo-800 text-sm px-4 py-2.5 rounded-xl border border-indigo-100 mb-4">
+          <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+          <span>{aiInterpretation}</span>
         </div>
       )}
 

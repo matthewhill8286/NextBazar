@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  Loader2,
+  Wand2,
+  PenLine,
+  TrendingUp,
+  DollarSign,
+  Lightbulb,
+  BarChart3,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ImageUpload from "@/app/components/image-upload";
 import type { UploadedImage } from "@/app/components/image-upload";
@@ -21,6 +32,11 @@ export default function PostClient() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiFilled, setAiFilled] = useState(false);
+  const [descLoading, setDescLoading] = useState(false);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingData, setPricingData] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
     category_id: "",
@@ -29,6 +45,7 @@ export default function PostClient() {
     description: "",
     condition: "good",
     location_id: "",
+    contact_phone: "",
   });
 
   useEffect(() => {
@@ -40,7 +57,18 @@ export default function PostClient() {
       ]);
       if (cats) setCategories(cats);
       if (locs) setLocations(locs);
-      if (user) setUserId(user.id);
+      if (user) {
+        setUserId(user.id);
+        // Auto-populate phone from profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", user.id)
+          .single();
+        if (profile?.phone) {
+          setFormData((prev) => ({ ...prev, contact_phone: profile.phone }));
+        }
+      }
     }
     loadData();
   }, []);
@@ -54,6 +82,83 @@ export default function PostClient() {
     },
     [],
   );
+
+  async function handleAiAutofill() {
+    // Find the first uploaded image with a URL
+    const firstUploaded = images.find((img) => img.url && !img.uploading);
+    if (!firstUploaded?.url) return;
+
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/autofill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: firstUploaded.url }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      setFormData((prev) => ({
+        ...prev,
+        title: data.title || prev.title,
+        description: data.description || prev.description,
+        category_id: data.category_id || prev.category_id,
+        condition: data.condition || prev.condition,
+        price: data.suggested_price?.toString() || prev.price,
+      }));
+      setAiFilled(true);
+    } catch {
+      // Silent fail — user can still fill manually
+    }
+    setAiLoading(false);
+  }
+
+  async function handleAiDescription() {
+    if (!formData.title) return;
+    setDescLoading(true);
+    try {
+      const firstImage = images.find((img) => img.url && !img.uploading);
+      const category = categories.find((c) => c.id === formData.category_id);
+      const res = await fetch("/api/ai/describe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          category: category?.name || "",
+          condition: formData.condition,
+          price: formData.price || null,
+          imageUrl: firstImage?.url || null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.description) {
+        setFormData((prev) => ({ ...prev, description: data.description }));
+      }
+    } catch {}
+    setDescLoading(false);
+  }
+
+  async function handleAiPricing() {
+    if (!formData.title) return;
+    setPricingLoading(true);
+    setPricingData(null);
+    try {
+      const res = await fetch("/api/ai/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          categoryId: formData.category_id || null,
+          condition: formData.condition,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setPricingData(data);
+    } catch {}
+    setPricingLoading(false);
+  }
 
   async function handlePublish() {
     setError("");
@@ -88,6 +193,7 @@ export default function PostClient() {
         price: formData.price ? Number(formData.price) : null,
         price_type: formData.price_type,
         condition: formData.condition || null,
+        contact_phone: formData.contact_phone || null,
         status: "active",
         primary_image_url: uploadedUrls[0] || null,
         image_count: uploadedUrls.length,
@@ -158,6 +264,34 @@ export default function PostClient() {
             </div>
           )}
 
+          {/* AI Auto-fill button */}
+          {images.some((img) => img.url && !img.uploading) && !aiFilled && (
+            <button
+              type="button"
+              onClick={handleAiAutofill}
+              disabled={aiLoading}
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-md shadow-indigo-200"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  AI is analyzing your photo...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  Auto-fill with AI
+                </>
+              )}
+            </button>
+          )}
+          {aiFilled && (
+            <div className="flex items-center gap-2 bg-green-50 text-green-700 text-sm px-4 py-2.5 rounded-xl border border-green-100">
+              <Sparkles className="w-4 h-4" />
+              AI filled in your listing details — review and adjust below
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -216,23 +350,55 @@ export default function PostClient() {
             Details &amp; Pricing
           </h2>
 
+          {/* Description with AI writer */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Description
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <button
+                type="button"
+                onClick={handleAiDescription}
+                disabled={descLoading || !formData.title}
+                className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {descLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <PenLine className="w-3 h-3" />
+                )}
+                {descLoading ? "Writing..." : "Write with AI"}
+              </button>
+            </div>
             <textarea
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm h-32 resize-none"
-              placeholder="Describe your item — condition, features, reason for selling..."
+              placeholder="Describe your item — or click 'Write with AI' to generate a description..."
               value={formData.description}
               onChange={(e) => update("description", e.target.value)}
             />
           </div>
 
+          {/* Price with AI pricing guide */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Price (€)
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-700">
+                  Price (€)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAiPricing}
+                  disabled={pricingLoading || !formData.title}
+                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {pricingLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <BarChart3 className="w-3 h-3" />
+                  )}
+                  {pricingLoading ? "Analyzing..." : "Get pricing guide"}
+                </button>
+              </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
                   €
@@ -245,14 +411,6 @@ export default function PostClient() {
                   onChange={(e) => update("price", e.target.value)}
                 />
               </div>
-              {formData.price && (
-                <div className="flex items-center gap-1.5 mt-2 text-xs text-green-600 bg-green-50 px-2.5 py-1.5 rounded-lg">
-                  <Sparkles className="w-3 h-3" />
-                  Similar items sell for €
-                  {Math.round(Number(formData.price) * 0.9)} – €
-                  {Math.round(Number(formData.price) * 1.1)}
-                </div>
-              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -305,6 +463,119 @@ export default function PostClient() {
                 <option value="contact">Contact for Price</option>
               </select>
             </div>
+          </div>
+
+          {/* AI Pricing Guide Panel */}
+          {pricingData && (
+            <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 rounded-xl p-5 border border-indigo-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span className="font-semibold text-indigo-900 text-sm">
+                  AI Pricing Guide
+                </span>
+                {pricingData.market?.similar_count > 0 && (
+                  <span className="text-xs text-indigo-400 ml-auto">
+                    Based on {pricingData.market.similar_count} similar listings
+                  </span>
+                )}
+              </div>
+
+              {/* Price suggestions */}
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    update("price", pricingData.price_low?.toString() || "")
+                  }
+                  className="bg-white/80 rounded-lg p-3 text-center hover:ring-2 hover:ring-indigo-200 transition-all cursor-pointer"
+                >
+                  <div className="text-[10px] text-gray-500 font-medium mb-0.5">
+                    Quick Sale
+                  </div>
+                  <div className="text-lg font-bold text-gray-900">
+                    €{pricingData.price_low?.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-green-600">Competitive</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update(
+                      "price",
+                      pricingData.suggested_price?.toString() || "",
+                    )
+                  }
+                  className="bg-white rounded-lg p-3 text-center ring-2 ring-indigo-300 cursor-pointer"
+                >
+                  <div className="text-[10px] text-indigo-600 font-semibold mb-0.5">
+                    Recommended
+                  </div>
+                  <div className="text-lg font-bold text-gray-900">
+                    €{pricingData.suggested_price?.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-indigo-600">Fair value</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update("price", pricingData.price_high?.toString() || "")
+                  }
+                  className="bg-white/80 rounded-lg p-3 text-center hover:ring-2 hover:ring-indigo-200 transition-all cursor-pointer"
+                >
+                  <div className="text-[10px] text-gray-500 font-medium mb-0.5">
+                    Premium
+                  </div>
+                  <div className="text-lg font-bold text-gray-900">
+                    €{pricingData.price_high?.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-amber-600">Patient sell</div>
+                </button>
+              </div>
+
+              {/* Reasoning */}
+              {pricingData.reasoning && (
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {pricingData.reasoning}
+                </p>
+              )}
+
+              {/* Tips */}
+              {pricingData.tips && pricingData.tips.length > 0 && (
+                <div className="space-y-1.5">
+                  {pricingData.tips.map((tip: string, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 text-xs text-indigo-700"
+                    >
+                      <Lightbulb className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                      {tip}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Click to apply */}
+              <p className="text-[10px] text-indigo-400 text-center">
+                Click a price above to apply it
+              </p>
+            </div>
+          )}
+
+          {/* Phone number */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="tel"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+              placeholder="+357 99 123456"
+              value={formData.contact_phone}
+              onChange={(e) => update("contact_phone", e.target.value)}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Add a phone number so buyers can call you directly. Leave blank to only use messaging.
+            </p>
           </div>
 
           <div className="flex gap-3">

@@ -18,6 +18,7 @@ type ListingData = {
   price: number | null;
   price_type: string;
   condition: string | null;
+  contact_phone: string | null;
   category_id: string;
   location_id: string | null;
   user_id: string;
@@ -50,6 +51,7 @@ export default function EditClient({ listing }: { listing: ListingData }) {
     price: listing.price?.toString() || "",
     price_type: listing.price_type,
     condition: listing.condition || "good",
+    contact_phone: listing.contact_phone || "",
     category_id: listing.category_id,
     location_id: listing.location_id || "",
   });
@@ -88,6 +90,7 @@ export default function EditClient({ listing }: { listing: ListingData }) {
         price: formData.price ? Number(formData.price) : null,
         price_type: formData.price_type,
         condition: formData.condition || null,
+        contact_phone: formData.contact_phone || null,
         category_id: formData.category_id,
         location_id: formData.location_id || null,
         primary_image_url: uploadedUrls[0] || null,
@@ -261,6 +264,23 @@ export default function EditClient({ listing }: { listing: ListingData }) {
               <option value="for_parts">For Parts</option>
             </select>
           </div>
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="tel"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+            placeholder="+357 99 123456"
+            value={formData.contact_phone}
+            onChange={(e) => update("contact_phone", e.target.value)}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Leave blank to hide the phone button on your listing.
+          </p>
         </div>
 
         {/* Save */}

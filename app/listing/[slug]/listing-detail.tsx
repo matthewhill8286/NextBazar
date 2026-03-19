@@ -26,6 +26,7 @@ import {
   ContactButtons,
 } from "./listing-actions";
 import ListingCard from "@/app/components/listing-card";
+import AiInsights from "./ai-insights";
 
 const LISTING_SELECT = `
   *,
@@ -347,71 +348,8 @@ export default function ListingDetail({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* AI Insights */}
-            {price && (
-              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-blue-50 rounded-2xl p-6 border border-indigo-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-lg">🤖</span>
-                  <h2 className="text-lg font-semibold text-indigo-900">
-                    AI Insights
-                  </h2>
-                  <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">
-                    Beta
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4">
-                    <div className="text-[11px] text-gray-500 font-medium mb-1">
-                      Market Price Range
-                    </div>
-                    <div className="font-bold text-gray-900 text-lg">
-                      €{priceEstLow.toLocaleString()} — €
-                      {priceEstHigh.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-green-600 mt-1.5 flex items-center gap-1 font-medium">
-                      <Shield className="w-3 h-3" /> Fair price
-                    </div>
-                  </div>
-                  <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4">
-                    <div className="text-[11px] text-gray-500 font-medium mb-1">
-                      Quality Score
-                    </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <div className="flex-1 h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500 rounded-full"
-                          style={{ width: `${qualityScore}%` }}
-                        />
-                      </div>
-                      <span className="font-bold text-gray-900 text-sm">
-                        {qualityScore}/100
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1.5">
-                      {galleryImages.length < 3
-                        ? "Add more photos to boost"
-                        : "Great listing quality"}
-                    </div>
-                  </div>
-                  <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4">
-                    <div className="text-[11px] text-gray-500 font-medium mb-1">
-                      Demand Level
-                    </div>
-                    <div className="font-bold text-gray-900 text-lg">
-                      {(listing.view_count || 0) > 500
-                        ? "High"
-                        : (listing.view_count || 0) > 100
-                          ? "Medium"
-                          : "Growing"}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1.5">
-                      Based on {(listing.view_count || 0).toLocaleString()}{" "}
-                      views &amp; {listing.favorite_count || 0} saves
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* AI Insights — dynamically generated */}
+            <AiInsights listingId={listing.id} />
 
             <div className="flex justify-end">
               <ReportAction listingId={listing.id} />
@@ -469,7 +407,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
                 </div>
               </div>
 
-              <ContactButtons listingId={listing.id} sellerId={listing.user_id} />
+              <ContactButtons listingId={listing.id} sellerId={listing.user_id} contactPhone={listing.contact_phone} />
 
               <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                 <Link
