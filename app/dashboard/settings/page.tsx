@@ -1,0 +1,48 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Loader2 } from "lucide-react";
+import SettingsClient from "./settings-client";
+
+export default function SettingsPage() {
+  const supabase = createClient();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, display_name, username, phone, bio")
+        .eq("id", user.id)
+        .single();
+
+      setProfile({
+        id: user.id,
+        email: user.email || "",
+        display_name: data?.display_name || null,
+        username: data?.username || null,
+        phone: data?.phone || null,
+        bio: data?.bio || null,
+      });
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  return <SettingsClient profile={profile} />;
+}

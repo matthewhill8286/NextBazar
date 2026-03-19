@@ -12,7 +12,9 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "indentWidth": 2
+    "indentWidth": 2,
+    "bracketSpacing": true,
+    "attributePosition": "auto"
   },
   "linter": {
     "enabled": true,

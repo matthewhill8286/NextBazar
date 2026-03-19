@@ -1,0 +1,206 @@
+"use client";
+
+import { useState, useRef, useCallback } from "react";
+import { Upload, X, GripVertical, Sparkles, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
+
+type UploadedImage = {
+  id: string;
+  file: File;
+  preview: string;
+  url?: string;
+  uploading: boolean;
+};
+
+type ImageUploadProps = {
+  userId: string;
+  images: UploadedImage[];
+  onChange: (images: UploadedImage[]) => void;
+  maxImages?: number;
+};
+
+export type { UploadedImage };
+
+export default function ImageUpload({
+  userId,
+  images,
+  onChange,
+  maxImages = 15,
+}: ImageUploadProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const supabase = createClient();
+
+  const uploadFile = useCallback(
+    async (file: File, tempId: string) => {
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from("listings")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("Upload error:", error);
+        return null;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("listings").getPublicUrl(data.path);
+
+      return publicUrl;
+    },
+    [userId, supabase],
+  );
+
+  const handleFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      const remaining = maxImages - images.length;
+      const toProcess = fileArray.slice(0, remaining);
+
+      if (toProcess.length === 0) return;
+
+      // Create preview entries
+      const newImages: UploadedImage[] = toProcess.map((file) => ({
+        id: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        preview: URL.createObjectURL(file),
+        uploading: true,
+      }));
+
+      const updatedImages = [...images, ...newImages];
+      onChange(updatedImages);
+
+      // Upload each file, updating the list after each completes
+      let currentImages = updatedImages;
+      for (const img of newImages) {
+        const url = await uploadFile(img.file, img.id);
+        currentImages = currentImages.map((i) =>
+          i.id === img.id
+            ? { ...i, url: url || undefined, uploading: false }
+            : i,
+        );
+        onChange(currentImages);
+      }
+    },
+    [images, maxImages, onChange, uploadFile],
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      if (e.dataTransfer.files) {
+        handleFiles(e.dataTransfer.files);
+      }
+    },
+    [handleFiles],
+  );
+
+  const removeImage = useCallback(
+    (id: string) => {
+      const img = images.find((i) => i.id === id);
+      if (img?.preview) URL.revokeObjectURL(img.preview);
+      onChange(images.filter((i) => i.id !== id));
+    },
+    [images, onChange],
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors bg-white ${
+          dragOver
+            ? "border-blue-400 bg-blue-50"
+            : "border-gray-300 hover:border-blue-400"
+        }`}
+      >
+        <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+        <p className="font-semibold text-gray-900 mb-1">
+          {images.length === 0
+            ? "Upload Photos"
+            : `Add More Photos (${images.length}/${maxImages})`}
+        </p>
+        <p className="text-sm text-gray-500 mb-3">
+          Drag & drop or click to browse. JPG, PNG, WebP up to 10MB each.
+        </p>
+        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-full">
+          <Sparkles className="w-3.5 h-3.5" />
+          AI will auto-fill details from your photos
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files) handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {/* Image previews */}
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+          {images.map((img, idx) => (
+            <div
+              key={img.id}
+              className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 group bg-gray-100"
+            >
+              <Image
+                src={img.preview}
+                alt={`Upload ${idx + 1}`}
+                fill
+                className="object-cover"
+                sizes="150px"
+              />
+
+              {/* Uploading overlay */}
+              {img.uploading && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                </div>
+              )}
+
+              {/* Cover badge */}
+              {idx === 0 && (
+                <span className="absolute bottom-1.5 left-1.5 bg-blue-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  Cover
+                </span>
+              )}
+
+              {/* Remove button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeImage(img.id);
+                }}
+                className="absolute top-1.5 right-1.5 p-1 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
