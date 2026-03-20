@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, X, ZoomIn, Maximize2 } from "lucide-react";
+import { useCallback, useState } from "react";
 
 type GalleryImage = {
   url: string;

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { LayoutDashboard, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
-import { User, LogOut, Settings, LayoutDashboard } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type UserProfile = {
   id: string;

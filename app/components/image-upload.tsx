@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Upload, X, GripVertical, Sparkles, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Loader2, Sparkles, Upload, X } from "lucide-react";
 import Image from "next/image";
+import { useCallback, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type UploadedImage = {
   id: string;
@@ -53,27 +53,41 @@ export default function ImageUpload({
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(file); return; }
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
 
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
           (blob) => {
-            if (!blob) { resolve(file); return; }
+            if (!blob) {
+              resolve(file);
+              return;
+            }
             const name = file.name.replace(/\.[^.]+$/, ".webp");
-            resolve(new File([blob], name, { type: "image/webp", lastModified: Date.now() }));
+            resolve(
+              new File([blob], name, {
+                type: "image/webp",
+                lastModified: Date.now(),
+              }),
+            );
           },
           "image/webp",
           0.85,
         );
       };
 
-      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
       img.src = objectUrl;
     });
   }, []);
 
   const uploadFile = useCallback(
-    async (file: File, tempId: string) => {
+    async (file: File, _tempId: string) => {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
@@ -179,7 +193,8 @@ export default function ImageUpload({
             : `Add More Photos (${images.length}/${maxImages})`}
         </p>
         <p className="text-sm text-gray-500 mb-3">
-          Drag & drop or click to browse. JPG, PNG, WebP — auto-optimised on upload.
+          Drag & drop or click to browse. JPG, PNG, WebP — auto-optimised on
+          upload.
         </p>
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-full">
           <Sparkles className="w-3.5 h-3.5" />

@@ -1,25 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  Sparkles,
-  Loader2,
-  Wand2,
-  PenLine,
-  TrendingUp,
-  DollarSign,
-  Lightbulb,
   BarChart3,
+  Lightbulb,
+  Loader2,
+  PenLine,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import ImageUpload from "@/app/components/image-upload";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import type { UploadedImage } from "@/app/components/image-upload";
+import ImageUpload from "@/app/components/image-upload";
+import { createClient } from "@/lib/supabase/client";
 
 type Category = { id: string; name: string; slug: string; icon: string };
-type Subcategory = { id: string; category_id: string; name: string; slug: string; sort_order: number };
+type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+};
 type Location = { id: string; name: string; slug: string };
 
 export default function PostClient() {
@@ -39,7 +43,9 @@ export default function PostClient() {
   const [descLoading, setDescLoading] = useState(false);
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingData, setPricingData] = useState<any>(null);
-  const [selectedPackage, setSelectedPackage] = useState<"free" | "featured" | "urgent">("free");
+  const [selectedPackage, setSelectedPackage] = useState<
+    "free" | "featured" | "urgent"
+  >("free");
   const [formData, setFormData] = useState({
     title: "",
     category_id: "",
@@ -54,9 +60,22 @@ export default function PostClient() {
 
   useEffect(() => {
     async function loadData() {
-      const [{ data: cats }, { data: subs }, { data: locs }, { data: { user } }] = await Promise.all([
-        supabase.from("categories").select("id, name, slug, icon").order("sort_order"),
-        supabase.from("subcategories").select("id, category_id, name, slug, sort_order").order("sort_order"),
+      const [
+        { data: cats },
+        { data: subs },
+        { data: locs },
+        {
+          data: { user },
+        },
+      ] = await Promise.all([
+        supabase
+          .from("categories")
+          .select("id, name, slug, icon")
+          .order("sort_order"),
+        supabase
+          .from("subcategories")
+          .select("id, category_id, name, slug, sort_order")
+          .order("sort_order"),
         supabase.from("locations").select("id, name, slug").order("sort_order"),
         supabase.auth.getUser(),
       ]);
@@ -77,7 +96,7 @@ export default function PostClient() {
       }
     }
     loadData();
-  }, []);
+  }, [supabase.from, supabase.auth.getUser]);
 
   const update = (key: string, value: string) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -91,12 +110,9 @@ export default function PostClient() {
     (s) => s.category_id === formData.category_id,
   );
 
-  const handleImagesChange = useCallback(
-    (newImages: UploadedImage[]) => {
-      setImages(newImages);
-    },
-    [],
-  );
+  const handleImagesChange = useCallback((newImages: UploadedImage[]) => {
+    setImages(newImages);
+  }, []);
 
   async function handleAiAutofill() {
     // Find the first uploaded image with a URL
@@ -192,9 +208,7 @@ export default function PostClient() {
       return;
     }
 
-    const uploadedUrls = images
-      .filter((img) => img.url)
-      .map((img) => img.url!);
+    const uploadedUrls = images.filter((img) => img.url).map((img) => img.url!);
 
     const { data, error: insertError } = await supabase
       .from("listings")
@@ -230,7 +244,9 @@ export default function PostClient() {
         url,
         sort_order: idx,
       }));
-      const { error: imgError } = await supabase.from("listing_images").insert(imageRecords);
+      const { error: imgError } = await supabase
+        .from("listing_images")
+        .insert(imageRecords);
       if (imgError) {
         console.error("listing_images insert error:", imgError);
         // Non-fatal — listing is created, images can be re-added from dashboard
@@ -296,7 +312,10 @@ export default function PostClient() {
           ) : (
             <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-white">
               <p className="text-gray-500 text-sm">
-                <a href="/auth/login?redirect=/post" className="text-blue-600 font-medium hover:underline">
+                <a
+                  href="/auth/login?redirect=/post"
+                  className="text-blue-600 font-medium hover:underline"
+                >
                   Sign in
                 </a>{" "}
                 to upload photos
@@ -375,14 +394,20 @@ export default function PostClient() {
             {visibleSubcategories.length > 0 && (
               <div className="mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subcategory <span className="text-gray-400 font-normal">(optional)</span>
+                  Subcategory{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {visibleSubcategories.map((sub) => (
                     <button
                       key={sub.id}
                       type="button"
-                      onClick={() => update("subcategory_id", formData.subcategory_id === sub.id ? "" : sub.id)}
+                      onClick={() =>
+                        update(
+                          "subcategory_id",
+                          formData.subcategory_id === sub.id ? "" : sub.id,
+                        )
+                      }
                       className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
                         formData.subcategory_id === sub.id
                           ? "border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
@@ -629,7 +654,8 @@ export default function PostClient() {
           {/* Phone number */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Phone Number <span className="text-gray-400 font-normal">(optional)</span>
+              Phone Number{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
               type="tel"
@@ -639,7 +665,8 @@ export default function PostClient() {
               onChange={(e) => update("contact_phone", e.target.value)}
             />
             <p className="text-xs text-gray-400 mt-1">
-              Add a phone number so buyers can call you directly. Leave blank to only use messaging.
+              Add a phone number so buyers can call you directly. Leave blank to
+              only use messaging.
             </p>
           </div>
 
@@ -685,7 +712,9 @@ export default function PostClient() {
               <div>
                 <p className="font-semibold text-gray-900">{formData.title}</p>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {formData.price ? `€${Number(formData.price).toLocaleString()}` : "Contact for price"}
+                  {formData.price
+                    ? `€${Number(formData.price).toLocaleString()}`
+                    : "Contact for price"}
                   {" · "}
                   {images.length} photo{images.length !== 1 ? "s" : ""}
                 </p>
@@ -706,8 +735,12 @@ export default function PostClient() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-gray-900">Free Listing</div>
-                  <div className="text-sm text-gray-500">Standard visibility for 30 days</div>
+                  <div className="font-semibold text-gray-900">
+                    Free Listing
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Standard visibility for 30 days
+                  </div>
                 </div>
                 <div className="font-bold text-gray-900">Free</div>
               </div>
@@ -728,10 +761,17 @@ export default function PostClient() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-gray-900">Featured Listing</div>
-                  <div className="text-sm text-gray-500">Top placement + highlighted badge for 7 days · Up to 5× more views</div>
+                  <div className="font-semibold text-gray-900">
+                    Featured Listing
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Top placement + highlighted badge for 7 days · Up to 5× more
+                    views
+                  </div>
                 </div>
-                <div className="font-bold text-amber-600 ml-4 flex-shrink-0">€4.99</div>
+                <div className="font-bold text-amber-600 ml-4 flex-shrink-0">
+                  €4.99
+                </div>
               </div>
             </button>
 
@@ -747,10 +787,17 @@ export default function PostClient() {
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-gray-900">Urgent Badge</div>
-                  <div className="text-sm text-gray-500">Urgent badge + priority in search for 3 days · Up to 3× more views</div>
+                  <div className="font-semibold text-gray-900">
+                    Urgent Badge
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Urgent badge + priority in search for 3 days · Up to 3× more
+                    views
+                  </div>
                 </div>
-                <div className="font-bold text-red-600 ml-4 flex-shrink-0">€2.99</div>
+                <div className="font-bold text-red-600 ml-4 flex-shrink-0">
+                  €2.99
+                </div>
               </div>
             </button>
           </div>
@@ -789,7 +836,8 @@ export default function PostClient() {
 
           {selectedPackage !== "free" && (
             <p className="text-center text-xs text-gray-400">
-              Your listing will be published first, then you&apos;ll be taken to secure checkout. Promotion activates on payment.
+              Your listing will be published first, then you&apos;ll be taken to
+              secure checkout. Promotion activates on payment.
             </p>
           )}
         </div>

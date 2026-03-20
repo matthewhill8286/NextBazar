@@ -1,14 +1,14 @@
 "use client";
 
+import { Heart, MessageCircle, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Search, Heart, MessageCircle, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import UserMenu from "./user-menu";
 
 export default function Navbar() {
-  const pathname = usePathname();
+  const _pathname = usePathname();
   const supabase = createClient();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -48,7 +48,12 @@ export default function Navbar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [
+    supabase.from,
+    supabase.channel,
+    supabase.auth.getUser,
+    supabase.removeChannel,
+  ]);
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">

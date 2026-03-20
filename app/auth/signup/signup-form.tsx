@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Loader2, Lock, Mail, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Mail, Lock, User, Loader2 } from "lucide-react";
 
 export default function SignupForm() {
-  const router = useRouter();
+  const _router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

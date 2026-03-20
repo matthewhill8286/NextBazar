@@ -1,32 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import {
-  MapPin,
+  ArrowLeft,
+  Box,
+  Calendar,
+  ChevronRight,
+  Clock,
   Eye,
   Heart,
-  Star,
-  Shield,
-  ArrowLeft,
-  Clock,
-  Tag,
-  Calendar,
-  Box,
-  ChevronRight,
   Loader2,
+  MapPin,
+  Shield,
+  Star,
+  Tag,
 } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import ListingCard from "@/app/components/listing-card";
 import { createClient } from "@/lib/supabase/client";
+import AiInsights from "./ai-insights";
 import ImageGallery from "./image-gallery";
 import {
-  FavoriteAction,
-  ShareAction,
-  ReportAction,
   ContactButtons,
+  FavoriteAction,
+  ReportAction,
+  ShareAction,
 } from "./listing-actions";
-import ListingCard from "@/app/components/listing-card";
-import AiInsights from "./ai-insights";
 
 const LISTING_SELECT = `
   *,
@@ -68,9 +67,7 @@ function formatDate(dateStr: string): string {
 
 function conditionLabel(c: string | null): string {
   if (!c) return "—";
-  return c
-    .replace("_", " ")
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return c.replace("_", " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 export default function ListingDetail({ slug }: { slug: string }) {
@@ -106,9 +103,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
       // Fetch related
       const { data: rel } = await supabase
         .from("listings")
-        .select(
-          `*, categories(name, slug, icon), locations(name, slug)`,
-        )
+        .select(`*, categories(name, slug, icon), locations(name, slug)`)
         .eq("status", "active")
         .eq("category_id", data.category_id)
         .neq("id", data.id)
@@ -119,7 +114,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
       setLoading(false);
     }
     load();
-  }, [slug]);
+  }, [slug, supabase.from]);
 
   if (loading) {
     return (
@@ -157,17 +152,19 @@ export default function ListingDetail({ slug }: { slug: string }) {
     : 2024;
 
   const price = listing.price;
-  const priceEstLow = price ? Math.round(price * 0.85) : 0;
-  const priceEstHigh = price ? Math.round(price * 1.15) : 0;
+  const _priceEstLow = price ? Math.round(price * 0.85) : 0;
+  const _priceEstHigh = price ? Math.round(price * 1.15) : 0;
 
   const galleryImages =
     listing.listing_images && listing.listing_images.length > 0
-      ? [...listing.listing_images].sort((a: any, b: any) => a.sort_order - b.sort_order)
+      ? [...listing.listing_images].sort(
+          (a: any, b: any) => a.sort_order - b.sort_order,
+        )
       : listing.primary_image_url
         ? [{ url: listing.primary_image_url, sort_order: 0 }]
         : [];
 
-  const qualityScore = Math.min(
+  const _qualityScore = Math.min(
     100,
     40 +
       galleryImages.length * 10 +
@@ -223,6 +220,11 @@ export default function ListingDetail({ slug }: { slug: string }) {
             {/* Title card */}
             <div className="bg-white rounded-2xl p-6 border border-gray-100">
               <div className="flex flex-wrap items-center gap-2 mb-3">
+                {listing.status === "sold" && (
+                  <span className="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full tracking-wide uppercase">
+                    Sold
+                  </span>
+                )}
                 {listing.is_promoted && (
                   <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     Featured
@@ -304,7 +306,9 @@ export default function ListingDetail({ slug }: { slug: string }) {
                     <Tag className="w-4 h-4 text-gray-500" />
                   </div>
                   <div>
-                    <div className="text-[11px] text-gray-500 font-medium">Category</div>
+                    <div className="text-[11px] text-gray-500 font-medium">
+                      Category
+                    </div>
                     <div className="text-sm font-semibold text-gray-900">
                       {listing.categories?.name || "—"}
                     </div>
@@ -316,7 +320,9 @@ export default function ListingDetail({ slug }: { slug: string }) {
                       <Box className="w-4 h-4 text-gray-500" />
                     </div>
                     <div>
-                      <div className="text-[11px] text-gray-500 font-medium">Condition</div>
+                      <div className="text-[11px] text-gray-500 font-medium">
+                        Condition
+                      </div>
                       <div className="text-sm font-semibold text-gray-900">
                         {conditionLabel(listing.condition)}
                       </div>
@@ -328,7 +334,9 @@ export default function ListingDetail({ slug }: { slug: string }) {
                     <MapPin className="w-4 h-4 text-gray-500" />
                   </div>
                   <div>
-                    <div className="text-[11px] text-gray-500 font-medium">Location</div>
+                    <div className="text-[11px] text-gray-500 font-medium">
+                      Location
+                    </div>
                     <div className="text-sm font-semibold text-gray-900">
                       {listing.locations?.name || "Cyprus"}
                     </div>
@@ -339,7 +347,9 @@ export default function ListingDetail({ slug }: { slug: string }) {
                     <Calendar className="w-4 h-4 text-gray-500" />
                   </div>
                   <div>
-                    <div className="text-[11px] text-gray-500 font-medium">Posted</div>
+                    <div className="text-[11px] text-gray-500 font-medium">
+                      Posted
+                    </div>
                     <div className="text-sm font-semibold text-gray-900">
                       {formatDate(listing.created_at)}
                     </div>

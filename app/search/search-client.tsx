@@ -20,6 +20,8 @@ export default function SearchClient() {
   const initialSubcategory = searchParams.get("subcategory") || "";
   const initialLocation    = searchParams.get("location")    || "";
   const initialSort        = searchParams.get("sort")        || "newest";
+  const initialPriceMin    = searchParams.get("priceMin")    || "";
+  const initialPriceMax    = searchParams.get("priceMax")    || "";
 
   const supabase = createClient();
 
@@ -28,6 +30,8 @@ export default function SearchClient() {
   const [subcategorySlug, setSubcategorySlug] = useState(initialSubcategory);
   const [locationSlug, setLocationSlug]     = useState(initialLocation);
   const [sortBy, setSortBy]             = useState(initialSort);
+  const [priceMin, setPriceMin]         = useState(initialPriceMin);
+  const [priceMax, setPriceMax]         = useState(initialPriceMax);
   const [showFilters, setShowFilters]   = useState(false);
   const [listings, setListings]         = useState<any[]>([]);
   const [categories, setCategories]     = useState<Category[]>([]);
@@ -48,10 +52,12 @@ export default function SearchClient() {
     if (subcategorySlug)               params.set("subcategory", subcategorySlug);
     if (locationSlug)                  params.set("location",    locationSlug);
     if (sortBy && sortBy !== "newest") params.set("sort",        sortBy);
+    if (priceMin)                      params.set("priceMin",    priceMin);
+    if (priceMax)                      params.set("priceMax",    priceMax);
 
     const qs = params.toString();
     router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
-  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, router]);
+  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, priceMin, priceMax, router]);
 
   // Load categories, subcategories, locations, and auth state once
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function SearchClient() {
       .select(`*, categories(name, slug, icon), locations(name, slug), subcategories(name, slug)`)
       .eq("status", "active");
 
-    // Apply category / subcategory / location filters
+    // Apply category / subcategory / location / price filters
     if (categorySlug) {
       const cat = categories.find((c) => c.slug === categorySlug);
       if (cat) q = q.eq("category_id", cat.id);
@@ -98,6 +104,8 @@ export default function SearchClient() {
       const loc = locations.find((l) => l.slug === locationSlug);
       if (loc) q = q.eq("location_id", loc.id);
     }
+    if (priceMin !== "") q = q.gte("price", Number(priceMin));
+    if (priceMax !== "") q = q.lte("price", Number(priceMax));
 
     // Sort
     if (sortBy === "price_low") q = q.order("price", { ascending: true });
@@ -135,6 +143,8 @@ export default function SearchClient() {
         const loc = locations.find((l) => l.slug === locationSlug);
         if (loc) fallback.eq("location_id", loc.id);
       }
+      if (priceMin !== "") fallback.gte("price", Number(priceMin));
+      if (priceMax !== "") fallback.lte("price", Number(priceMax));
 
       const { data: fallbackData } = await fallback
         .order("created_at", { ascending: false })
@@ -145,7 +155,7 @@ export default function SearchClient() {
       setListings(data || []);
     }
     setLoading(false);
-  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, categories, subcategories, locations]);
+  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, priceMin, priceMax, categories, subcategories, locations]);
 
   // Debounce search — wait 300ms after user stops typing
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -197,7 +207,7 @@ export default function SearchClient() {
   const visibleSubcategories = subcategories.filter(
     (s) => s.category_id === activeCategory?.id,
   );
-  const hasFilters = query || categorySlug || subcategorySlug || locationSlug;
+  const hasFilters = query || categorySlug || subcategorySlug || locationSlug || priceMin || priceMax;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -291,6 +301,38 @@ export default function SearchClient() {
             </div>
           </div>
 
+          {/* Price range */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              Price Range (€)
+            </label>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min"
+                  value={priceMin}
+                  onChange={(e) => setPriceMin(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+              <span className="text-gray-400 text-sm flex-shrink-0">–</span>
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max"
+                  value={priceMax}
+                  onChange={(e) => setPriceMax(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Subcategory drill-down — only visible when a category is selected */}
           {visibleSubcategories.length > 0 && (
             <div>
@@ -347,12 +389,27 @@ export default function SearchClient() {
               <X className="w-3 h-3" />
             </button>
           )}
+          {(priceMin || priceMax) && (
+            <button
+              onClick={() => { setPriceMin(""); setPriceMax(""); }}
+              className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-green-100 transition-colors"
+            >
+              {priceMin && priceMax
+                ? `€${priceMin} – €${priceMax}`
+                : priceMin
+                  ? `From €${priceMin}`
+                  : `Up to €${priceMax}`}
+              <X className="w-3 h-3" />
+            </button>
+          )}
           <button
             onClick={() => {
               setQuery("");
               setCategorySlug("");
               setSubcategorySlug("");
               setLocationSlug("");
+              setPriceMin("");
+              setPriceMax("");
             }}
             className="text-sm text-gray-400 hover:text-gray-600 ml-1"
           >

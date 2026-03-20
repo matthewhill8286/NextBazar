@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Bot, MessageCircle, Search, Shield } from "lucide-react";
 import Link from "next/link";
-import { Search, Shield, Bot, MessageCircle, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ListingCard from "./components/listing-card";
 
@@ -30,7 +30,9 @@ export default function HomeClient() {
         { data: feat },
         { data: rec },
         { count },
-        { data: { user } },
+        {
+          data: { user },
+        },
       ] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
         supabase
@@ -71,7 +73,7 @@ export default function HomeClient() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [supabase.from, supabase.auth.getUser]);
 
   return (
     <>
@@ -170,7 +172,12 @@ export default function HomeClient() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {featured.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  userId={userId}
+                  isSaved={savedIds.has(listing.id)}
+                />
               ))}
             </div>
           </section>
@@ -180,7 +187,9 @@ export default function HomeClient() {
         <section className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">
-              {!loading && recent.length === 0 ? "No listings yet" : "Recently Added"}
+              {!loading && recent.length === 0
+                ? "No listings yet"
+                : "Recently Added"}
             </h2>
             {recent.length > 0 && (
               <Link
@@ -210,7 +219,12 @@ export default function HomeClient() {
           ) : recent.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {recent.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  userId={userId}
+                  isSaved={savedIds.has(listing.id)}
+                />
               ))}
             </div>
           ) : (

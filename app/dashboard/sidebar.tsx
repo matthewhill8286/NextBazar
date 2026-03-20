@@ -1,17 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import clsx from "clsx";
 import {
+  Eye,
+  Heart,
   LayoutDashboard,
   Package,
   Settings,
-  Eye,
-  Heart,
   Shield,
-  TrendingUp,
 } from "lucide-react";
-import clsx from "clsx";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type SidebarProps = {
   profile: {
@@ -83,7 +82,9 @@ export default function DashboardSidebar({ profile, stats }: SidebarProps) {
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-gray-50 rounded-lg p-2.5 text-center">
-            <div className="text-lg font-bold text-gray-900">{stats.active}</div>
+            <div className="text-lg font-bold text-gray-900">
+              {stats.active}
+            </div>
             <div className="text-[10px] text-gray-500 font-medium">Active</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2.5 text-center">

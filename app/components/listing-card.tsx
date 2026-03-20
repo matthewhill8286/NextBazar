@@ -1,6 +1,6 @@
+import { Eye, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, MapPin } from "lucide-react";
 import FavoriteButton from "./favorite-button";
 
 type CatLike = { name: string; slug?: string; icon?: string };
@@ -19,6 +19,7 @@ type ListingCardProps = {
     condition: string | null;
     view_count: number;
     created_at: string;
+    status?: string | null;
     // Accept both aliased and non-aliased shapes from Supabase
     category?: CatLike | null;
     categories?: CatLike | null;
@@ -55,8 +56,13 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export default function ListingCard({ listing, userId, isSaved, onUnsave }: ListingCardProps) {
-  const cat = unwrap(listing.categories) || unwrap(listing.category);
+export default function ListingCard({
+  listing,
+  userId,
+  isSaved,
+  onUnsave,
+}: ListingCardProps) {
+  const _cat = unwrap(listing.categories) || unwrap(listing.category);
   const loc = unwrap(listing.locations) || unwrap(listing.location);
 
   const imageSrc =
@@ -88,11 +94,25 @@ export default function ListingCard({ listing, userId, isSaved, onUnsave }: List
           </span>
         )}
 
+        {listing.status === "sold" && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="bg-white text-gray-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-md tracking-wide uppercase">
+              Sold
+            </span>
+          </div>
+        )}
+
         <FavoriteButton
           listingId={listing.id}
           userId={userId}
           initialSaved={isSaved}
-          onToggle={onUnsave ? (saved) => { if (!saved) onUnsave(); } : undefined}
+          onToggle={
+            onUnsave
+              ? (saved) => {
+                  if (!saved) onUnsave();
+                }
+              : undefined
+          }
         />
 
         <div className="absolute bottom-2 right-2 flex gap-1.5">

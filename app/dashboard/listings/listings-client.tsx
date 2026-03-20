@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 import {
+  CheckCircle,
   Eye,
   Heart,
+  Loader2,
   MoreVertical,
   Pencil,
-  Trash2,
-  CheckCircle,
   RotateCcw,
-  Loader2,
   Star,
+  Trash2,
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Listing = {
@@ -30,7 +30,10 @@ type Listing = {
   is_promoted: boolean;
   is_urgent: boolean;
   created_at: string;
-  categories: { name: string; icon: string }[] | { name: string; icon: string } | null;
+  categories:
+    | { name: string; icon: string }[]
+    | { name: string; icon: string }
+    | null;
   locations: { name: string }[] | { name: string } | null;
 };
 
@@ -46,7 +49,7 @@ export default function ListingsClient({
 }: {
   initialListings: Listing[];
 }) {
-  const router = useRouter();
+  const _router = useRouter();
   const supabase = createClient();
   const [listings, setListings] = useState(initialListings);
   const [tab, setTab] = useState("active");
@@ -144,10 +147,17 @@ export default function ListingsClient({
                     {unwrap(listing.categories)?.icon || "📦"}
                   </div>
                 )}
-                {listing.is_promoted && (
+                {listing.is_promoted && listing.status !== "sold" && (
                   <span className="absolute top-0.5 left-0.5 bg-amber-500 text-white text-[8px] font-bold px-1 py-0.5 rounded">
                     AD
                   </span>
+                )}
+                {listing.status === "sold" && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <span className="bg-white text-gray-900 text-[9px] font-bold px-2 py-0.5 rounded tracking-wide uppercase">
+                      Sold
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -248,9 +258,7 @@ export default function ListingsClient({
           <div className="text-4xl mb-3">
             {tab === "active" ? "📦" : tab === "sold" ? "✅" : "⏳"}
           </div>
-          <p className="text-gray-500 text-sm">
-            No {tab} listings
-          </p>
+          <p className="text-gray-500 text-sm">No {tab} listings</p>
         </div>
       )}
     </div>

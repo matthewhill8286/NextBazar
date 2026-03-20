@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { stripe, PROMOTION_PRICES, type PromotionType } from "@/lib/stripe";
+import { type NextRequest, NextResponse } from "next/server";
+import { PROMOTION_PRICES, type PromotionType, stripe } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { listingId, listingTitle, promotionType, origin } = body;
+    const { listingId, promotionType, origin } = body;
 
     if (!listingId || !promotionType || !origin) {
       return NextResponse.json(

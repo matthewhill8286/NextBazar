@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Heart, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import ListingCard from "@/app/components/listing-card";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SavedPage() {
   const router = useRouter();
@@ -45,9 +45,7 @@ export default function SavedPage() {
       // Fetch the actual listings
       const { data } = await supabase
         .from("listings")
-        .select(
-          `*, categories(name, slug, icon), locations(name, slug)`,
-        )
+        .select(`*, categories(name, slug, icon), locations(name, slug)`)
         .in("id", ids)
         .eq("status", "active");
 
@@ -60,9 +58,9 @@ export default function SavedPage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [router.push, supabase.from, supabase.auth.getUser]);
 
-  async function removeFavorite(listingId: string) {
+  async function _removeFavorite(listingId: string) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -74,7 +72,9 @@ export default function SavedPage() {
       .eq("user_id", user.id)
       .eq("listing_id", listingId);
 
-    try { await supabase.rpc("decrement_favorite_count", { lid: listingId }); } catch {}
+    try {
+      await supabase.rpc("decrement_favorite_count", { lid: listingId });
+    } catch {}
 
     setListings((prev) => prev.filter((l) => l.id !== listingId));
   }
@@ -104,10 +104,7 @@ export default function SavedPage() {
                 data: { user },
               } = await supabase.auth.getUser();
               if (!user) return;
-              await supabase
-                .from("favorites")
-                .delete()
-                .eq("user_id", user.id);
+              await supabase.from("favorites").delete().eq("user_id", user.id);
               setListings([]);
             }}
             className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1.5"
@@ -125,7 +122,9 @@ export default function SavedPage() {
               listing={listing}
               userId={userId}
               isSaved={true}
-              onUnsave={() => setListings((prev) => prev.filter((l) => l.id !== listing.id))}
+              onUnsave={() =>
+                setListings((prev) => prev.filter((l) => l.id !== listing.id))
+              }
             />
           ))}
         </div>

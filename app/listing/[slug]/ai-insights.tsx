@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
-  Shield,
-  TrendingUp,
-  TrendingDown,
-  Minus,
+  BarChart3,
   Clock,
   Lightbulb,
-  Loader2,
+  Shield,
   Sparkles,
-  BarChart3,
   Target,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type InsightsData = {
   insights: {

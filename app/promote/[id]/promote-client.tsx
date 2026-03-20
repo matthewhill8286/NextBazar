@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { ArrowLeft, Check, Loader2, Star, TrendingUp, Zap } from "lucide-react";
 import Image from "next/image";
-import {
-  ArrowLeft,
-  Loader2,
-  Star,
-  Zap,
-  TrendingUp,
-  Eye,
-  Check,
-} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const PROMOTIONS = [
@@ -62,7 +54,9 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
     async function load() {
       const { data } = await supabase
         .from("listings")
-        .select("id, title, slug, primary_image_url, price, currency, is_promoted, is_urgent")
+        .select(
+          "id, title, slug, primary_image_url, price, currency, is_promoted, is_urgent",
+        )
         .eq("id", listingId)
         .single();
 
@@ -74,7 +68,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
       setLoading(false);
     }
     load();
-  }, [listingId]);
+  }, [listingId, router.push, supabase.from]);
 
   async function handleCheckout(promotionType: string) {
     setCheckingOut(promotionType);
