@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import StripeCheckoutModal from "@/app/components/stripe-checkout-modal";
 
 const PROMOTIONS = [
   {
@@ -49,6 +50,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
   const [selected, setSelected] = useState("featured");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -70,31 +72,9 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
     load();
   }, [listingId, router.push, supabase.from]);
 
-  async function handleCheckout(promotionType: string) {
-    setCheckingOut(promotionType);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId,
-          listingTitle: listing?.title || "",
-          promotionType,
-          origin: window.location.origin,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || "Failed to create checkout");
-        setCheckingOut(null);
-      }
-    } catch {
-      alert("Something went wrong");
-      setCheckingOut(null);
-    }
+  function handleCheckout(promotionType: string) {
+    setSelected(promotionType);
+    setCheckoutOpen(true);
   }
 
   if (loading) {
@@ -249,23 +229,24 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
       {/* Checkout button */}
       <button
         onClick={() => handleCheckout(selected)}
-        disabled={!!checkingOut}
-        className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm shadow-blue-200"
+        className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-200"
       >
-        {checkingOut ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <>
-            Proceed to Payment —{" "}
-            {PROMOTIONS.find((p) => p.key === selected)?.price}
-          </>
-        )}
+        Pay Now — {PROMOTIONS.find((p) => p.key === selected)?.price}
       </button>
 
       <p className="text-center text-xs text-gray-400 mt-3">
         Secure payment powered by Stripe. You won&apos;t be charged until you
         confirm.
       </p>
+
+      {/* Embedded Stripe checkout modal */}
+      {checkoutOpen && listing && (
+        <StripeCheckoutModal
+          listingId={listing.id}
+          promotionType={selected as "featured" | "urgent"}
+          onClose={() => setCheckoutOpen(false)}
+        />
+      )}
     </div>
   );
 }

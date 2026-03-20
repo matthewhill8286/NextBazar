@@ -16,6 +16,7 @@ import type { UploadedImage } from "@/app/components/image-upload";
 import ImageUpload from "@/app/components/image-upload";
 import type { UploadedVideo } from "@/app/components/video-upload";
 import VideoUpload from "@/app/components/video-upload";
+import StripeCheckoutModal from "@/app/components/stripe-checkout-modal";
 import { createClient } from "@/lib/supabase/client";
 
 type Category = { id: string; name: string; slug: string; icon: string };
@@ -41,6 +42,7 @@ export default function PostClient() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [video, setVideo] = useState<UploadedVideo | null>(null);
+  const [checkoutListing, setCheckoutListing] = useState<{ id: string; slug: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFilled, setAiFilled] = useState(false);
   const [descLoading, setDescLoading] = useState(false);
@@ -262,24 +264,11 @@ export default function PostClient() {
       }
     }
 
-    // If a paid promotion was selected, go to checkout instead of the listing
+    // If a paid promotion, open the embedded Stripe checkout modal
     if (selectedPackage !== "free") {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: data.id,
-          listingTitle: formData.title,
-          promotionType: selectedPackage,
-          origin: window.location.origin,
-        }),
-      });
-      const checkout = await res.json();
-      if (checkout.url) {
-        window.location.href = checkout.url;
-        return;
-      }
-      // Checkout creation failed — fall through to listing page
+      setCheckoutListing({ id: data.id, slug: data.slug });
+      setLoading(false);
+      return;
     }
 
     router.push(`/listing/${data.slug}`);
@@ -864,11 +853,22 @@ export default function PostClient() {
 
           {selectedPackage !== "free" && (
             <p className="text-center text-xs text-gray-400">
-              Your listing will be published first, then you&apos;ll be taken to
-              secure checkout. Promotion activates on payment.
+              Your listing will be published, then pay to activate your promotion.
             </p>
           )}
         </div>
+      )}
+
+      {/* Embedded Stripe checkout — opens after listing is created */}
+      {checkoutListing && (
+        <StripeCheckoutModal
+          listingId={checkoutListing.id}
+          promotionType={selectedPackage as "featured" | "urgent"}
+          onClose={() => {
+            // User dismissed without paying — go to listing (it's live, just unpromoted)
+            router.push(`/listing/${checkoutListing.slug}`);
+          }}
+        />
       )}
     </div>
   );

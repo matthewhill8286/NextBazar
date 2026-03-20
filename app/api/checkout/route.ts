@@ -4,7 +4,7 @@ import { PROMOTION_PRICES, type PromotionType, stripe } from "@/lib/stripe";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { listingId, promotionType, origin } = body;
+    const { listingId, promotionType, origin, embedded = false } = body;
 
     if (!listingId || !promotionType || !origin) {
       return NextResponse.json(
@@ -21,24 +21,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [
-        {
-          price: promo.priceId,
-          quantity: 1,
-        },
-      ],
+    const sharedParams = {
+      mode: "payment" as const,
+      line_items: [{ price: promo.priceId, quantity: 1 }],
       metadata: {
         listing_id: listingId,
         promotion_type: promotionType,
         duration_days: promo.duration.toString(),
       },
-      success_url: `${origin}/promote/success?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}`,
-      cancel_url: `${origin}/promote/${listingId}`,
-    });
+    };
 
-    return NextResponse.json({ url: session.url });
+    if (embedded) {
+      // Embedded checkout — return clientSecret, Stripe renders the form in-page
+      const session = await stripe.checkout.sessions.create({
+        ...sharedParams,
+        ui_mode: "embedded",
+        return_url: `${origin}/promote/success?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}`,
+      });
+      return NextResponse.json({ clientSecret: session.client_secret });
+    } else {
+      // Hosted checkout — redirect to Stripe's page
+      const session = await stripe.checkout.sessions.create({
+        ...sharedParams,
+        success_url: `${origin}/promote/success?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}`,
+        cancel_url: `${origin}/promote/${listingId}`,
+      });
+      return NextResponse.json({ url: session.url });
+    }
   } catch (err: any) {
     console.error("Checkout error:", err);
     return NextResponse.json(
