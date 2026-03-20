@@ -11,24 +11,33 @@ export default function Navbar() {
   const _pathname = usePathname();
   const supabase = createClient();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
-    async function loadUnread() {
+    async function loadCounts() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Count unread messages not sent by me
-      const { count } = await supabase
+      // Count unread messages aren't sent by me
+      const { count: msgCount } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .neq("sender_id", user.id)
         .is("read_at", null);
 
-      setUnreadCount(count || 0);
+      setUnreadCount(msgCount || 0);
+
+      // Count saved/favorited listings (PK is user_id+listing_id, no id column)
+      const { count: favCount } = await supabase
+        .from("favorites")
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      setSavedCount(favCount || 0);
     }
-    loadUnread();
+    loadCounts();
 
     // Listen for new messages
     const channel = supabase
@@ -36,12 +45,22 @@ export default function Navbar() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
-        () => loadUnread(),
+        () => loadCounts(),
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "messages" },
-        () => loadUnread(),
+        () => loadCounts(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "favorites" },
+        () => loadCounts(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "favorites" },
+        () => loadCounts(),
       )
       .subscribe();
 
@@ -91,10 +110,15 @@ export default function Navbar() {
 
           <Link
             href="/saved"
-            className="hidden sm:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors relative"
           >
             <Heart className="w-4 h-4" />
             <span className="hidden lg:inline">Saved</span>
+            {savedCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                {savedCount > 99 ? "99+" : savedCount}
+              </span>
+            )}
           </Link>
 
           <Link

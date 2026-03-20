@@ -1,16 +1,7 @@
 "use client";
 
-import {
-  BarChart3,
-  Clock,
-  Lightbulb,
-  Shield,
-  Sparkles,
-  Target,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import {BarChart3, Clock, Lightbulb, Shield, Sparkles, Target, TrendingDown, TrendingUp,} from "lucide-react";
+import {useEffect, useState} from "react";
 
 type InsightsData = {
   insights: {
@@ -34,12 +25,26 @@ type InsightsData = {
   };
 };
 
-export default function AiInsights({ listingId }: { listingId: string }) {
+export type InsightsPriceSummary = {
+  price_low: number;
+  price_high: number;
+  price_verdict: string;
+  loading: boolean;
+};
+
+export default function AiInsights({
+  listingId,
+  onInsights,
+}: {
+  listingId: string;
+  onInsights?: (summary: InsightsPriceSummary) => void;
+}) {
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    onInsights?.({ price_low: 0, price_high: 0, price_verdict: "", loading: true });
     async function load() {
       try {
         const res = await fetch("/api/ai/insights", {
@@ -48,14 +53,22 @@ export default function AiInsights({ listingId }: { listingId: string }) {
           body: JSON.stringify({ listingId }),
         });
         if (!res.ok) throw new Error();
-        const result = await res.json();
+        const result: InsightsData = await res.json();
         setData(result);
+        onInsights?.({
+          price_low: result.insights.price_low,
+          price_high: result.insights.price_high,
+          price_verdict: result.insights.price_verdict,
+          loading: false,
+        });
       } catch {
         setError(true);
+        onInsights?.({ price_low: 0, price_high: 0, price_verdict: "", loading: false });
       }
       setLoading(false);
     }
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
   if (loading) {
@@ -90,14 +103,11 @@ export default function AiInsights({ listingId }: { listingId: string }) {
         ? "text-red-600"
         : "text-blue-600";
 
-  const verdictIcon =
-    insights.price_verdict === "underpriced"
+  const VerdictIcon = insights.price_verdict === "underpriced"
       ? TrendingDown
       : insights.price_verdict === "overpriced"
-        ? TrendingUp
-        : Shield;
-
-  const VerdictIcon = verdictIcon;
+          ? TrendingUp
+          : Shield;
 
   const verdictLabel =
     insights.price_verdict === "underpriced"

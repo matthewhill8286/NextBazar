@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ListingCard from "@/app/components/listing-card";
 import { createClient } from "@/lib/supabase/client";
-import AiInsights from "./ai-insights";
+import AiInsights, { type InsightsPriceSummary } from "./ai-insights";
 import ImageGallery from "./image-gallery";
 import {
   ContactButtons,
@@ -77,6 +77,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
   const [related, setRelated] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [aiPrice, setAiPrice] = useState<InsightsPriceSummary | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -153,8 +154,14 @@ export default function ListingDetail({ slug }: { slug: string }) {
     : 2024;
 
   const price = listing.price;
-  const priceEstLow = price ? Math.round(price * 0.85) : 0;
-  const priceEstHigh = price ? Math.round(price * 1.15) : 0;
+  // AI-computed market range (falls back to ±15% until insights load)
+  const priceEstLow = aiPrice && !aiPrice.loading && aiPrice.price_low
+    ? aiPrice.price_low
+    : price ? Math.round(price * 0.85) : 0;
+  const priceEstHigh = aiPrice && !aiPrice.loading && aiPrice.price_high
+    ? aiPrice.price_high
+    : price ? Math.round(price * 1.15) : 0;
+  const aiMarketLoading = !aiPrice || aiPrice.loading;
 
   const galleryImages =
     listing.listing_images && listing.listing_images.length > 0
@@ -227,7 +234,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
                   </span>
                 )}
                 {listing.is_promoted && (
-                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <span className="bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     Featured
                   </span>
                 )}
@@ -296,9 +303,31 @@ export default function ListingDetail({ slug }: { slug: string }) {
                     <Shield className="w-3 h-3 text-blue-500" />
                     Market value:
                   </span>
-                  <span className="font-semibold text-gray-700">
-                    {formatPrice(priceEstLow, listing.currency)} – {formatPrice(priceEstHigh, listing.currency)}
-                  </span>
+                  {aiMarketLoading ? (
+                    <span className="h-3.5 w-28 bg-gray-200 rounded animate-pulse inline-block" />
+                  ) : (
+                    <>
+                      <span className="font-semibold text-gray-700">
+                        {formatPrice(priceEstLow, listing.currency)} – {formatPrice(priceEstHigh, listing.currency)}
+                      </span>
+                      {aiPrice?.price_verdict && aiPrice.price_verdict !== "no_data" && (
+                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                          aiPrice.price_verdict === "underpriced"
+                            ? "bg-green-100 text-green-700"
+                            : aiPrice.price_verdict === "overpriced"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-blue-100 text-blue-700"
+                        }`}>
+                          {aiPrice.price_verdict === "underpriced"
+                            ? "Below Market"
+                            : aiPrice.price_verdict === "overpriced"
+                              ? "Above Market"
+                              : "Fair Price"}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-400 ml-0.5">· AI</span>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -384,7 +413,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
             )}
 
             {/* AI Insights — dynamically generated */}
-            <AiInsights listingId={listing.id} />
+            <AiInsights listingId={listing.id} onInsights={setAiPrice} />
 
             <div className="flex justify-end">
               <ReportAction listingId={listing.id} />
@@ -396,7 +425,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
             {/* Seller card */}
             <div className="bg-white rounded-2xl p-6 border border-gray-100 sticky top-20">
               <div className="flex items-center gap-3.5 mb-5">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-md shadow-blue-100">
+                <div className="w-14 h-14 bg-linear-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xl shrink-0 shadow-md shadow-blue-100">
                   {profile?.avatar_url ? (
                     <img
                       src={profile.avatar_url}
@@ -413,10 +442,10 @@ export default function ListingDetail({ slug }: { slug: string }) {
                       {profile?.display_name || "Seller"}
                     </span>
                     {profile?.verified && (
-                      <Shield className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <Shield className="w-4 h-4 text-blue-500 shrink-0" />
                     )}
                     {profile?.is_dealer && (
-                      <span className="text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      <span className="text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded-full shrink-0">
                         PRO
                       </span>
                     )}
@@ -468,19 +497,19 @@ export default function ListingDetail({ slug }: { slug: string }) {
               </p>
               <ul className="space-y-1.5 text-xs text-amber-700 leading-relaxed">
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0">•</span>
+                  <span className="shrink-0">•</span>
                   Meet in a public place for the exchange
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0">•</span>
+                  <span className="shrink-0">•</span>
                   Check the item thoroughly before paying
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0">•</span>
+                  <span className="shrink-0">•</span>
                   Never send money in advance
                 </li>
                 <li className="flex gap-2">
-                  <span className="flex-shrink-0">•</span>
+                  <span className="shrink-0">•</span>
                   Use in-app messaging for all communication
                 </li>
               </ul>

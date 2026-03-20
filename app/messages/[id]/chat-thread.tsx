@@ -46,6 +46,8 @@ export default function ChatThread({
   const [loading, setLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState<string | null>(null); // message id with open menu
   const [pinnedExpanded, setPinnedExpanded] = useState(false);
+  const [sendError, setSendError] = useState(false);
+  const [deletingConv, setDeletingConv] = useState(false);
 
   // Load conversation & messages
   useEffect(() => {
@@ -180,7 +182,8 @@ export default function ChatThread({
     };
     setMessages((prev) => [...prev, optimistic]);
 
-    const { data: inserted } = await supabase
+    setSendError(false);
+    const { data: inserted, error: insertErr } = await supabase
       .from("messages")
       .insert({ conversation_id: conversationId, sender_id: userId, content })
       .select("id, sender_id, content, created_at, read_at, is_pinned, deleted_at")
@@ -190,15 +193,21 @@ export default function ChatThread({
       setMessages((prev) =>
         prev.map((m) => (m.id === optimistic.id ? inserted : m)),
       );
+      // Update conversation preview
+      await supabase
+        .from("conversations")
+        .update({
+          last_message_at: new Date().toISOString(),
+          last_message_preview: content.slice(0, 100),
+        })
+        .eq("id", conversationId);
+    } else {
+      // Insert failed — remove optimistic message and surface the error
+      console.error("Message send failed:", insertErr);
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      setNewMessage(content); // restore text
+      setSendError(true);
     }
-
-    await supabase
-      .from("conversations")
-      .update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: content.slice(0, 100),
-      })
-      .eq("id", conversationId);
 
     setSending(false);
     inputRef.current?.focus();
@@ -215,6 +224,13 @@ export default function ChatThread({
       .from("messages")
       .update({ is_pinned: next })
       .eq("id", msg.id);
+  }
+
+  async function handleDeleteConversation() {
+    if (!confirm("Delete this entire conversation? This cannot be undone.")) return;
+    setDeletingConv(true);
+    await supabase.from("conversations").delete().eq("id", conversationId);
+    router.push("/messages");
   }
 
   async function handleDelete(msg: Message) {
@@ -316,6 +332,14 @@ export default function ChatThread({
             <Image src={listing.primary_image_url} alt="" fill className="object-cover" sizes="40px" />
           </Link>
         )}
+        <button
+          onClick={handleDeleteConversation}
+          disabled={deletingConv}
+          title="Delete conversation"
+          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Listing info bar */}
@@ -476,6 +500,16 @@ export default function ChatThread({
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Send error banner */}
+      {sendError && (
+        <div className="bg-red-50 border-t border-red-100 px-4 py-2 flex items-center justify-between flex-shrink-0">
+          <span className="text-xs text-red-600">Message failed to send. Please try again.</span>
+          <button onClick={() => setSendError(false)} className="text-red-400 hover:text-red-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Input */}
       <div className="bg-white border-t border-gray-100 px-4 py-3 flex-shrink-0">
