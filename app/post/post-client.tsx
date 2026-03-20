@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { UploadedImage } from "@/app/components/image-upload";
 import ImageUpload from "@/app/components/image-upload";
+import type { UploadedVideo } from "@/app/components/video-upload";
+import VideoUpload from "@/app/components/video-upload";
 import { createClient } from "@/lib/supabase/client";
 
 type Category = { id: string; name: string; slug: string; icon: string };
@@ -38,6 +40,7 @@ export default function PostClient() {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [video, setVideo] = useState<UploadedVideo | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFilled, setAiFilled] = useState(false);
   const [descLoading, setDescLoading] = useState(false);
@@ -207,6 +210,11 @@ export default function PostClient() {
       setLoading(false);
       return;
     }
+    if (video?.uploading) {
+      setError("Please wait for your video to finish uploading.");
+      setLoading(false);
+      return;
+    }
 
     const uploadedUrls = images.filter((img) => img.url).map((img) => img.url!);
 
@@ -227,6 +235,7 @@ export default function PostClient() {
         status: "active",
         primary_image_url: uploadedUrls[0] || null,
         image_count: uploadedUrls.length,
+        video_url: video?.url || null,
       })
       .select("id, slug")
       .single();
@@ -717,6 +726,7 @@ export default function PostClient() {
                     : "Contact for price"}
                   {" · "}
                   {images.length} photo{images.length !== 1 ? "s" : ""}
+                  {video?.url ? " · 1 video" : ""}
                 </p>
               </div>
             </div>
@@ -801,6 +811,24 @@ export default function PostClient() {
               </div>
             </button>
           </div>
+
+          {/* Video Tour — paid tiers only */}
+          {selectedPackage !== "free" && userId && (
+            <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/50 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">🎬 Video Tour</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Add a short video to showcase your item — included with your paid listing
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold bg-violet-600 text-white px-2 py-0.5 rounded-full">
+                  INCLUDED
+                </span>
+              </div>
+              <VideoUpload userId={userId} video={video} onChange={setVideo} />
+            </div>
+          )}
 
           <div className="flex gap-3">
             <button

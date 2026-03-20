@@ -31,6 +31,7 @@ export default function EditWrapper({ listingId }: { listingId: string }) {
           `
           id, title, description, price, price_type, condition, contact_phone,
           category_id, location_id, user_id, primary_image_url,
+          is_promoted, video_url,
           images:listing_images(id, url, sort_order)
         `,
         )

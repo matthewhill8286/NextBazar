@@ -78,14 +78,17 @@ export default function ListingDetail({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [aiPrice, setAiPrice] = useState<InsightsPriceSummary | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from("listings")
-        .select(LISTING_SELECT)
-        .eq("slug", slug)
-        .single();
+      // Fetch current user in parallel with listing
+      const [{ data: { user } }, { data, error }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from("listings").select(LISTING_SELECT).eq("slug", slug).single(),
+      ]);
+
+      setCurrentUserId(user?.id ?? null);
 
       if (error || !data) {
         setNotFound(true);
@@ -153,6 +156,8 @@ export default function ListingDetail({ slug }: { slug: string }) {
     ? new Date(profile.created_at).getFullYear()
     : 2024;
 
+  const isOwner = !!currentUserId && currentUserId === listing.user_id;
+
   const price = listing.price;
   // AI-computed market range (falls back to ±15% until insights load)
   const priceEstLow = aiPrice && !aiPrice.loading && aiPrice.price_low
@@ -218,7 +223,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
 
       {/* Gallery */}
       <div className="max-w-7xl mx-auto px-4 mb-6">
-        <ImageGallery images={galleryImages} title={listing.title} />
+        <ImageGallery images={galleryImages} title={listing.title} videoUrl={listing.video_url} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pb-16">
@@ -297,7 +302,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
                 )}
               </div>
 
-              {price && (
+              {price && isOwner && (
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-4">
                   <span className="flex items-center gap-1">
                     <Shield className="w-3 h-3 text-blue-500" />
@@ -412,8 +417,10 @@ export default function ListingDetail({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* AI Insights — dynamically generated */}
-            <AiInsights listingId={listing.id} onInsights={setAiPrice} />
+            {/* AI Insights — owner only */}
+            {isOwner && (
+              <AiInsights listingId={listing.id} onInsights={setAiPrice} />
+            )}
 
             <div className="flex justify-end">
               <ReportAction listingId={listing.id} />

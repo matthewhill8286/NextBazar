@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
   const priceMin    = sp.get("priceMin");
   const priceMax    = sp.get("priceMax");
   const limit       = Math.min(48, Number(sp.get("limit") || "24"));
+  const offset      = Math.max(0, Number(sp.get("offset") || "0"));
 
   const supabase = getSupabase();
 
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
   // ── Browse / filter-only mode (no query) ──────────────────────────────────
   let browseQ = supabase
     .from("listings")
-    .select(`*, categories(name, slug, icon), locations(name, slug)`)
+    .select(`*, categories(name, slug, icon), locations(name, slug)`, { count: "exact" })
     .eq("status", "active");
 
   // Apply filters via joined table slug lookups
@@ -140,8 +141,8 @@ export async function GET(req: NextRequest) {
   const s = sortMap[sort] ?? sortMap.newest;
   browseQ = browseQ.order(s.col, { ascending: s.asc });
 
-  const { data, error } = await browseQ.limit(limit);
+  const { data, count, error } = await browseQ.range(offset, offset + limit - 1);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ hits: data || [], totalHits: (data || []).length, source: "browse" });
+  return NextResponse.json({ hits: data || [], totalHits: count ?? (data || []).length, source: "browse" });
 }

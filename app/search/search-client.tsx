@@ -38,7 +38,10 @@ export default function SearchClient() {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations]       = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [totalHits, setTotalHits] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 24;
   const [aiSearching, setAiSearching] = useState(false);
   const [aiInterpretation, setAiInterpretation] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -99,20 +102,26 @@ export default function SearchClient() {
     };
   }
 
+  const buildParams = useCallback((searchQuery: string, pageOffset: number) => {
+    const params = new URLSearchParams();
+    if (searchQuery)     params.set("q",           searchQuery);
+    if (categorySlug)    params.set("category",    categorySlug);
+    if (subcategorySlug) params.set("subcategory", subcategorySlug);
+    if (locationSlug)    params.set("location",    locationSlug);
+    if (sortBy)          params.set("sort",         sortBy);
+    if (priceMin)        params.set("priceMin",     priceMin);
+    if (priceMax)        params.set("priceMax",     priceMax);
+    params.set("limit",  String(PAGE_SIZE));
+    params.set("offset", String(pageOffset));
+    return params;
+  }, [categorySlug, subcategorySlug, locationSlug, sortBy, priceMin, priceMax]);
+
   const doSearch = useCallback(async (searchQuery = query) => {
     setLoading(true);
     setAiInterpretation("");
+    setOffset(0);
 
-    const params = new URLSearchParams();
-    if (searchQuery)   params.set("q",           searchQuery);
-    if (categorySlug)  params.set("category",    categorySlug);
-    if (subcategorySlug) params.set("subcategory", subcategorySlug);
-    if (locationSlug)  params.set("location",    locationSlug);
-    if (sortBy)        params.set("sort",         sortBy);
-    if (priceMin)      params.set("priceMin",     priceMin);
-    if (priceMax)      params.set("priceMax",     priceMax);
-
-    const res = await fetch(`/api/search?${params.toString()}`);
+    const res = await fetch(`/api/search?${buildParams(searchQuery, 0).toString()}`);
     if (res.ok) {
       const data = await res.json();
       const hits = (data.hits || []).map(normalise);
@@ -121,7 +130,21 @@ export default function SearchClient() {
     }
 
     setLoading(false);
-  }, [categorySlug, subcategorySlug, locationSlug, sortBy, priceMin, priceMax]);
+  }, [categorySlug, subcategorySlug, locationSlug, sortBy, priceMin, priceMax, buildParams]);
+
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true);
+    const nextOffset = offset + PAGE_SIZE;
+    const res = await fetch(`/api/search?${buildParams(query, nextOffset).toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const hits = (data.hits || []).map(normalise);
+      setListings(prev => [...prev, ...hits]);
+      setTotalHits(data.totalHits ?? (listings.length + hits.length));
+      setOffset(nextOffset);
+    }
+    setLoadingMore(false);
+  }, [offset, query, buildParams, listings.length]);
 
   // Run on first load (once categories are ready) and whenever filters change.
   // Deliberately excludes `query` — text search only fires on Enter.
@@ -401,7 +424,10 @@ export default function SearchClient() {
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">
           <span className="font-semibold text-gray-900">{totalHits}</span>{" "}
-          listings found
+          {totalHits === 1 ? "listing" : "listings"} found
+          {listings.length < totalHits && !loading && (
+            <span className="text-gray-400"> · showing {listings.length}</span>
+          )}
         </p>
         {!showFilters && (
           <select
@@ -434,11 +460,32 @@ export default function SearchClient() {
           ))}
         </div>
       ) : listings.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
+            ))}
+          </div>
+
+          {listings.length < totalHits && (
+            <div className="mt-8 flex flex-col items-center gap-2">
+              <p className="text-sm text-gray-400">
+                Showing {listings.length} of {totalHits} listings
+              </p>
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="px-8 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
+                ) : (
+                  `Load more (${totalHits - listings.length} remaining)`
+                )}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-20">
           <div className="text-5xl mb-4">🔍</div>
