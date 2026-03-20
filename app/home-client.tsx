@@ -20,6 +20,8 @@ export default function HomeClient() {
   const [recent, setRecent] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function load() {
@@ -28,6 +30,7 @@ export default function HomeClient() {
         { data: feat },
         { data: rec },
         { count },
+        { data: { user } },
       ] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
         supabase
@@ -47,12 +50,24 @@ export default function HomeClient() {
           .from("listings")
           .select("id", { count: "exact", head: true })
           .eq("status", "active"),
+        supabase.auth.getUser(),
       ]);
 
       setCategories(cats || []);
       setFeatured(feat || []);
       setRecent(rec || []);
       setTotalCount(count || 0);
+
+      if (user) {
+        setUserId(user.id);
+        // Fetch all saved listing IDs in one shot
+        const { data: favs } = await supabase
+          .from("favorites")
+          .select("listing_id")
+          .eq("user_id", user.id);
+        if (favs) setSavedIds(new Set(favs.map((f: any) => f.listing_id)));
+      }
+
       setLoading(false);
     }
     load();
@@ -155,7 +170,7 @@ export default function HomeClient() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {featured.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
               ))}
             </div>
           </section>
@@ -195,7 +210,7 @@ export default function HomeClient() {
           ) : recent.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {recent.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+                <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
               ))}
             </div>
           ) : (

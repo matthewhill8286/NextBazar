@@ -25,6 +25,12 @@ type ListingCardProps = {
     location?: LocLike | null;
     locations?: LocLike | null;
   };
+  /** Authenticated user id — passed from parent to avoid per-card auth fetch */
+  userId?: string | null;
+  /** Whether this listing is already saved — passed from parent to avoid per-card DB fetch */
+  isSaved?: boolean;
+  /** Called when the user un-saves this listing (useful for removing it from a saved list) */
+  onUnsave?: () => void;
 };
 
 function unwrap<T>(v: T | T[] | null | undefined): T | null {
@@ -49,7 +55,7 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export default function ListingCard({ listing }: ListingCardProps) {
+export default function ListingCard({ listing, userId, isSaved, onUnsave }: ListingCardProps) {
   const cat = unwrap(listing.categories) || unwrap(listing.category);
   const loc = unwrap(listing.locations) || unwrap(listing.location);
 
@@ -62,7 +68,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
       href={`/listing/${listing.slug}`}
       className="group bg-white rounded-xl border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-gray-200 hover:-translate-y-0.5 block"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+      <div className="relative aspect-4/3 overflow-hidden bg-gray-100">
         <Image
           src={imageSrc}
           alt={listing.title}
@@ -72,7 +78,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
         />
 
         {listing.is_promoted && (
-          <span className="absolute top-2.5 left-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">
+          <span className="absolute top-2.5 left-2.5 bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">
             Featured
           </span>
         )}
@@ -82,7 +88,12 @@ export default function ListingCard({ listing }: ListingCardProps) {
           </span>
         )}
 
-        <FavoriteButton listingId={listing.id} />
+        <FavoriteButton
+          listingId={listing.id}
+          userId={userId}
+          initialSaved={isSaved}
+          onToggle={onUnsave ? (saved) => { if (!saved) onUnsave(); } : undefined}
+        />
 
         <div className="absolute bottom-2 right-2 flex gap-1.5">
           <span className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
@@ -97,7 +108,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
           {listing.title}
         </h3>
         <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-2.5">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
+          <MapPin className="w-3 h-3 shrink-0" />
           <span>{loc?.name || "Cyprus"}</span>
           {listing.condition && (
             <>

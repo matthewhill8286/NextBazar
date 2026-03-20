@@ -31,8 +31,9 @@ import AiInsights from "./ai-insights";
 const LISTING_SELECT = `
   *,
   categories(name, slug, icon),
+  subcategories(name, slug),
   locations(name, slug),
-  profiles!listings_user_id_fkey(id, display_name, avatar_url, verified, rating, total_reviews, is_dealer, created_at),
+  profiles!listings_user_id_fkey(id, display_name, avatar_url, verified, rating, total_reviews, is_dealer, created_at, whatsapp_number, telegram_username),
   listing_images(id, url, thumbnail_url, sort_order)
 `;
 
@@ -180,19 +181,30 @@ export default function ListingDetail({ slug }: { slug: string }) {
         <nav className="flex items-center gap-1.5 text-sm text-gray-500 overflow-x-auto hide-scrollbar">
           <Link
             href="/"
-            className="hover:text-gray-700 flex items-center gap-1 flex-shrink-0"
+            className="hover:text-gray-700 flex items-center gap-1 shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
             Home
           </Link>
-          <ChevronRight className="w-3 h-3 flex-shrink-0 text-gray-300" />
+          <ChevronRight className="w-3 h-3 shrink-0 text-gray-300" />
           <Link
             href={`/search?category=${listing.categories?.slug || ""}`}
-            className="hover:text-gray-700 flex-shrink-0"
+            className="hover:text-gray-700 shrink-0"
           >
             {listing.categories?.name || "Listing"}
           </Link>
-          <ChevronRight className="w-3 h-3 flex-shrink-0 text-gray-300" />
+          {listing.subcategories && (
+            <>
+              <ChevronRight className="w-3 h-3 shrink-0 text-gray-300" />
+              <Link
+                href={`/search?category=${listing.categories?.slug || ""}&subcategory=${listing.subcategories.slug}`}
+                className="hover:text-gray-700 shrink-0"
+              >
+                {listing.subcategories.name}
+              </Link>
+            </>
+          )}
+          <ChevronRight className="w-3 h-3 shrink-0 text-gray-300" />
           <span className="text-gray-900 font-medium truncate">
             {listing.title}
           </span>
@@ -407,7 +419,14 @@ export default function ListingDetail({ slug }: { slug: string }) {
                 </div>
               </div>
 
-              <ContactButtons listingId={listing.id} sellerId={listing.user_id} contactPhone={listing.contact_phone} />
+              <ContactButtons
+                listingId={listing.id}
+                sellerId={listing.user_id}
+                listingTitle={listing.title}
+                contactPhone={listing.contact_phone}
+                whatsappNumber={profile?.whatsapp_number || null}
+                telegramUsername={profile?.telegram_username || null}
+              />
 
               <div className="mt-4 pt-4 border-t border-gray-100 text-center">
                 <Link

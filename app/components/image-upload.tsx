@@ -32,6 +32,46 @@ export default function ImageUpload({
   const [dragOver, setDragOver] = useState(false);
   const supabase = createClient();
 
+  // Client-side compression: resize to ≤1600px and convert to WebP before upload
+  const compressImage = useCallback(async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+
+        const MAX_DIM = 1600;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            const name = file.name.replace(/\.[^.]+$/, ".webp");
+            resolve(new File([blob], name, { type: "image/webp", lastModified: Date.now() }));
+          },
+          "image/webp",
+          0.85,
+        );
+      };
+
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
+    });
+  }, []);
+
   const uploadFile = useCallback(
     async (file: File, tempId: string) => {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
@@ -66,8 +106,11 @@ export default function ImageUpload({
 
       if (toProcess.length === 0) return;
 
-      // Create preview entries
-      const newImages: UploadedImage[] = toProcess.map((file) => ({
+      // Compress all images in parallel (resize + WebP) before preview/upload
+      const compressed = await Promise.all(toProcess.map(compressImage));
+
+      // Create preview entries using the compressed files
+      const newImages: UploadedImage[] = compressed.map((file) => ({
         id: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
         preview: URL.createObjectURL(file),
@@ -77,7 +120,7 @@ export default function ImageUpload({
       const updatedImages = [...images, ...newImages];
       onChange(updatedImages);
 
-      // Upload each file, updating the list after each completes
+      // Upload each compressed file, updating the list after each completes
       let currentImages = updatedImages;
       for (const img of newImages) {
         const url = await uploadFile(img.file, img.id);
@@ -89,7 +132,7 @@ export default function ImageUpload({
         onChange(currentImages);
       }
     },
-    [images, maxImages, onChange, uploadFile],
+    [images, maxImages, onChange, uploadFile, compressImage],
   );
 
   const handleDrop = useCallback(
@@ -136,7 +179,7 @@ export default function ImageUpload({
             : `Add More Photos (${images.length}/${maxImages})`}
         </p>
         <p className="text-sm text-gray-500 mb-3">
-          Drag & drop or click to browse. JPG, PNG, WebP up to 10MB each.
+          Drag & drop or click to browse. JPG, PNG, WebP — auto-optimised on upload.
         </p>
         <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-full">
           <Sparkles className="w-3.5 h-3.5" />

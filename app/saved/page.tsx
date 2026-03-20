@@ -12,6 +12,7 @@ export default function SavedPage() {
   const supabase = createClient();
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -23,6 +24,8 @@ export default function SavedPage() {
         router.push("/auth/login?redirect=/saved");
         return;
       }
+
+      setUserId(user.id);
 
       // Get favorite listing IDs
       const { data: favs } = await supabase
@@ -117,7 +120,13 @@ export default function SavedPage() {
       {listings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              userId={userId}
+              isSaved={true}
+              onUnsave={() => setListings((prev) => prev.filter((l) => l.id !== listing.id))}
+            />
           ))}
         </div>
       ) : (

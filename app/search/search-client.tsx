@@ -1,45 +1,78 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, SlidersHorizontal, X, Sparkles, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ListingCard from "@/app/components/listing-card";
 
 type Category = { id: string; name: string; slug: string; icon: string };
+type Subcategory = { id: string; category_id: string; name: string; slug: string };
 type Location = { id: string; name: string; slug: string };
 
 export default function SearchClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialCategory = searchParams.get("category") || "";
-  const initialQuery = searchParams.get("q") || "";
+
+  // Seed all filter state from URL params so deep links and refreshes work
+  const initialQuery       = searchParams.get("q")           || "";
+  const initialCategory    = searchParams.get("category")    || "";
+  const initialSubcategory = searchParams.get("subcategory") || "";
+  const initialLocation    = searchParams.get("location")    || "";
+  const initialSort        = searchParams.get("sort")        || "newest";
 
   const supabase = createClient();
 
-  const [query, setQuery] = useState(initialQuery);
-  const [categorySlug, setCategorySlug] = useState(initialCategory);
-  const [locationSlug, setLocationSlug] = useState("");
-  const [sortBy, setSortBy] = useState("newest");
-  const [showFilters, setShowFilters] = useState(false);
-  const [listings, setListings] = useState<any[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [query, setQuery]               = useState(initialQuery);
+  const [categorySlug, setCategorySlug]     = useState(initialCategory);
+  const [subcategorySlug, setSubcategorySlug] = useState(initialSubcategory);
+  const [locationSlug, setLocationSlug]     = useState(initialLocation);
+  const [sortBy, setSortBy]             = useState(initialSort);
+  const [showFilters, setShowFilters]   = useState(false);
+  const [listings, setListings]         = useState<any[]>([]);
+  const [categories, setCategories]     = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [locations, setLocations]       = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiSearching, setAiSearching] = useState(false);
   const [aiInterpretation, setAiInterpretation] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
-  // Load categories & locations once
+  // Keep the URL in sync with filter state so every combination is deep-linkable
+  // and the browser back/forward buttons work as expected.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (query)                         params.set("q",           query);
+    if (categorySlug)                  params.set("category",    categorySlug);
+    if (subcategorySlug)               params.set("subcategory", subcategorySlug);
+    if (locationSlug)                  params.set("location",    locationSlug);
+    if (sortBy && sortBy !== "newest") params.set("sort",        sortBy);
+
+    const qs = params.toString();
+    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
+  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, router]);
+
+  // Load categories, subcategories, locations, and auth state once
   useEffect(() => {
     async function loadMeta() {
-      const [{ data: cats }, { data: locs }] = await Promise.all([
-        supabase
-          .from("categories")
-          .select("id, name, slug, icon")
-          .order("sort_order"),
+      const [{ data: cats }, { data: subs }, { data: locs }, { data: { user } }] = await Promise.all([
+        supabase.from("categories").select("id, name, slug, icon").order("sort_order"),
+        supabase.from("subcategories").select("id, category_id, name, slug").order("sort_order"),
         supabase.from("locations").select("id, name, slug").order("sort_order"),
+        supabase.auth.getUser(),
       ]);
       if (cats) setCategories(cats);
+      if (subs) setSubcategories(subs);
       if (locs) setLocations(locs);
+      if (user) {
+        setUserId(user.id);
+        const { data: favs } = await supabase
+          .from("favorites")
+          .select("listing_id")
+          .eq("user_id", user.id);
+        if (favs) setSavedIds(new Set(favs.map((f: any) => f.listing_id)));
+      }
     }
     loadMeta();
   }, []);
@@ -49,15 +82,17 @@ export default function SearchClient() {
 
     let q = supabase
       .from("listings")
-      .select(
-        `*, categories(name, slug, icon), locations(name, slug)`,
-      )
+      .select(`*, categories(name, slug, icon), locations(name, slug), subcategories(name, slug)`)
       .eq("status", "active");
 
-    // Apply category/location filters
+    // Apply category / subcategory / location filters
     if (categorySlug) {
       const cat = categories.find((c) => c.slug === categorySlug);
       if (cat) q = q.eq("category_id", cat.id);
+    }
+    if (subcategorySlug) {
+      const sub = subcategories.find((s) => s.slug === subcategorySlug);
+      if (sub) q = q.eq("subcategory_id", sub.id);
     }
     if (locationSlug) {
       const loc = locations.find((l) => l.slug === locationSlug);
@@ -66,18 +101,13 @@ export default function SearchClient() {
 
     // Sort
     if (sortBy === "price_low") q = q.order("price", { ascending: true });
-    else if (sortBy === "price_high")
-      q = q.order("price", { ascending: false });
-    else if (sortBy === "popular")
-      q = q.order("view_count", { ascending: false });
-    else q = q.order("created_at", { ascending: false });
+    else if (sortBy === "price_high") q = q.order("price", { ascending: false });
+    else if (sortBy === "popular")    q = q.order("view_count", { ascending: false });
+    else                              q = q.order("created_at", { ascending: false });
 
     if (query) {
       // Try full-text search first
-      const fts = q.textSearch("search_vector", query, {
-        type: "websearch",
-        config: "english",
-      });
+      const fts = q.textSearch("search_vector", query, { type: "websearch", config: "english" });
       const { data } = await fts.limit(24);
 
       if (data && data.length > 0) {
@@ -86,17 +116,20 @@ export default function SearchClient() {
         return;
       }
 
-      // Fallback: pattern match (handles partial words, acronyms, short queries)
+      // Fallback: pattern match
       const fallback = supabase
         .from("listings")
-        .select(`*, categories(name, slug, icon), locations(name, slug)`)
+        .select(`*, categories(name, slug, icon), locations(name, slug), subcategories(name, slug)`)
         .eq("status", "active")
         .or(`title.ilike.%${query}%,description.ilike.%${query}%`);
 
-      // Re-apply category/location filters on fallback
       if (categorySlug) {
         const cat = categories.find((c) => c.slug === categorySlug);
         if (cat) fallback.eq("category_id", cat.id);
+      }
+      if (subcategorySlug) {
+        const sub = subcategories.find((s) => s.slug === subcategorySlug);
+        if (sub) fallback.eq("subcategory_id", sub.id);
       }
       if (locationSlug) {
         const loc = locations.find((l) => l.slug === locationSlug);
@@ -112,7 +145,7 @@ export default function SearchClient() {
       setListings(data || []);
     }
     setLoading(false);
-  }, [query, categorySlug, locationSlug, sortBy, categories, locations]);
+  }, [query, categorySlug, subcategorySlug, locationSlug, sortBy, categories, subcategories, locations]);
 
   // Debounce search — wait 300ms after user stops typing
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -159,8 +192,12 @@ export default function SearchClient() {
     }
   }
 
-  const activeCategory = categories.find((c) => c.slug === categorySlug);
-  const hasFilters = query || categorySlug || locationSlug;
+  const activeCategory    = categories.find((c) => c.slug === categorySlug);
+  const activeSubcategory = subcategories.find((s) => s.slug === subcategorySlug);
+  const visibleSubcategories = subcategories.filter(
+    (s) => s.category_id === activeCategory?.id,
+  );
+  const hasFilters = query || categorySlug || subcategorySlug || locationSlug;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -201,56 +238,83 @@ export default function SearchClient() {
       </div>
 
       {showFilters && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Category
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
-              value={categorySlug}
-              onChange={(e) => setCategorySlug(e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.slug}>
-                  {cat.icon} {cat.name}
-                </option>
-              ))}
-            </select>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                Category
+              </label>
+              <select
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
+                value={categorySlug}
+                onChange={(e) => { setCategorySlug(e.target.value); setSubcategorySlug(""); }}
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.slug}>
+                    {cat.icon} {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                Location
+              </label>
+              <select
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
+                value={locationSlug}
+                onChange={(e) => setLocationSlug(e.target.value)}
+              >
+                <option value="">All Locations</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.slug}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                Sort By
+              </label>
+              <select
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="newest">Newest First</option>
+                <option value="price_low">Price: Low → High</option>
+                <option value="price_high">Price: High → Low</option>
+                <option value="popular">Most Popular</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Location
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
-              value={locationSlug}
-              onChange={(e) => setLocationSlug(e.target.value)}
-            >
-              <option value="">All Locations</option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.slug}>
-                  {loc.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">
-              Sort By
-            </label>
-            <select
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white outline-none focus:border-blue-400"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="newest">Newest First</option>
-              <option value="price_low">Price: Low → High</option>
-              <option value="price_high">Price: High → Low</option>
-              <option value="popular">Most Popular</option>
-            </select>
-          </div>
+
+          {/* Subcategory drill-down — only visible when a category is selected */}
+          {visibleSubcategories.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-2">
+                Subcategory
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {visibleSubcategories.map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setSubcategorySlug(subcategorySlug === sub.slug ? "" : sub.slug)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                      subcategorySlug === sub.slug
+                        ? "border-blue-400 bg-blue-50 text-blue-700 ring-2 ring-blue-100"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:text-blue-600"
+                    }`}
+                  >
+                    {sub.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -258,10 +322,19 @@ export default function SearchClient() {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           {activeCategory && (
             <button
-              onClick={() => setCategorySlug("")}
+              onClick={() => { setCategorySlug(""); setSubcategorySlug(""); }}
               className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-blue-100 transition-colors"
             >
               {activeCategory.icon} {activeCategory.name}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          {activeSubcategory && (
+            <button
+              onClick={() => setSubcategorySlug("")}
+              className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-indigo-100 transition-colors"
+            >
+              {activeSubcategory.name}
               <X className="w-3 h-3" />
             </button>
           )}
@@ -278,6 +351,7 @@ export default function SearchClient() {
             onClick={() => {
               setQuery("");
               setCategorySlug("");
+              setSubcategorySlug("");
               setLocationSlug("");
             }}
             className="text-sm text-gray-400 hover:text-gray-600 ml-1"
@@ -333,7 +407,7 @@ export default function SearchClient() {
       ) : listings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <ListingCard key={listing.id} listing={listing} userId={userId} isSaved={savedIds.has(listing.id)} />
           ))}
         </div>
       ) : (

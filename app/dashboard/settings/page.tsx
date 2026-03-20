@@ -19,7 +19,7 @@ export default function SettingsPage() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("id, display_name, username, phone, bio")
+        .select("id, display_name, username, phone, bio, whatsapp_number, telegram_username")
         .eq("id", user.id)
         .single();
 
@@ -30,6 +30,8 @@ export default function SettingsPage() {
         username: data?.username || null,
         phone: data?.phone || null,
         bio: data?.bio || null,
+        whatsapp_number: data?.whatsapp_number || null,
+        telegram_username: data?.telegram_username || null,
       });
       setLoading(false);
     }
