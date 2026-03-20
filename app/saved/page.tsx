@@ -3,83 +3,67 @@
 import { Heart, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ListingCard from "@/app/components/listing-card";
 import { createClient } from "@/lib/supabase/client";
+import { useSaved } from "@/lib/saved-context";
 
 export default function SavedPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [listings, setListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { savedIds, count, toggle, loading: savedLoading } = useSaved();
 
+  // Map of listingId → full listing data
+  const [listingMap, setListingMap] = useState<Record<string, any>>({});
+  const [pageLoading, setPageLoading] = useState(true);
+  const fetchedRef = useRef<Set<string>>(new Set());
+
+  // Auth guard
   useEffect(() => {
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) router.push("/auth/login?redirect=/saved");
+    });
+  }, []);
 
-      if (!user) {
-        router.push("/auth/login?redirect=/saved");
-        return;
-      }
+  // Fetch listing data for any IDs not yet in the map
+  useEffect(() => {
+    if (savedLoading) return;
 
-      setUserId(user.id);
+    const missing = [...savedIds].filter((id) => !fetchedRef.current.has(id));
 
-      // Get favorite listing IDs
-      const { data: favs } = await supabase
-        .from("favorites")
-        .select("listing_id")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!favs || favs.length === 0) {
-        setListings([]);
-        setLoading(false);
-        return;
-      }
-
-      const ids = favs.map((f) => f.listing_id);
-
-      // Fetch the actual listings
-      const { data } = await supabase
-        .from("listings")
-        .select(`*, categories(name, slug, icon), locations(name, slug)`)
-        .in("id", ids)
-        .eq("status", "active");
-
-      // Sort them in the same order as favorites (most recently saved first)
-      const sorted = ids
-        .map((id) => data?.find((l) => l.id === id))
-        .filter(Boolean);
-
-      setListings(sorted);
-      setLoading(false);
+    if (missing.length === 0) {
+      setPageLoading(false);
+      return;
     }
-    load();
-  }, [router.push, supabase.from, supabase.auth.getUser]);
 
-  async function _removeFavorite(listingId: string) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    supabase
+      .from("listings")
+      .select("*, categories(name, slug, icon), locations(name, slug)")
+      .in("id", missing)
+      .then(({ data }) => {
+        if (data) {
+          const newEntries = Object.fromEntries(data.map((l) => [l.id, l]));
+          missing.forEach((id) => fetchedRef.current.add(id));
+          setListingMap((prev) => ({ ...prev, ...newEntries }));
+        }
+        setPageLoading(false);
+      });
+  }, [savedIds, savedLoading]);
+
+  // Derive ordered list — only IDs currently in savedIds, preserving insertion order
+  const listings = [...savedIds]
+    .map((id) => listingMap[id])
+    .filter(Boolean);
+
+  async function handleClearAll() {
+    if (!confirm("Remove all saved listings?")) return;
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
-    await supabase
-      .from("favorites")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("listing_id", listingId);
-
-    try {
-      await supabase.rpc("decrement_favorite_count", { lid: listingId });
-    } catch {}
-
-    setListings((prev) => prev.filter((l) => l.id !== listingId));
+    // Toggle off each saved item through context so count stays in sync
+    await Promise.all([...savedIds].map((id) => toggle(id)));
   }
 
-  if (loading) {
+  if (savedLoading || pageLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -93,21 +77,13 @@ export default function SavedPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Saved Listings</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {listings.length} {listings.length === 1 ? "item" : "items"} saved
+            {count} {count === 1 ? "item" : "items"} saved
           </p>
         </div>
-        {listings.length > 0 && (
+        {count > 0 && (
           <button
-            onClick={async () => {
-              if (!confirm("Remove all saved listings?")) return;
-              const {
-                data: { user },
-              } = await supabase.auth.getUser();
-              if (!user) return;
-              await supabase.from("favorites").delete().eq("user_id", user.id);
-              setListings([]);
-            }}
-            className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1.5"
+            onClick={handleClearAll}
+            className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1.5 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear all
           </button>
@@ -117,15 +93,7 @@ export default function SavedPage() {
       {listings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {listings.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              userId={userId}
-              isSaved={true}
-              onUnsave={() =>
-                setListings((prev) => prev.filter((l) => l.id !== listing.id))
-              }
-            />
+            <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>
       ) : (

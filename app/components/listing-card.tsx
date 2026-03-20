@@ -26,11 +26,9 @@ type ListingCardProps = {
     location?: LocLike | null;
     locations?: LocLike | null;
   };
-  /** Authenticated user id — passed from parent to avoid per-card auth fetch */
+  // Legacy props kept for call-site compatibility — no longer used internally
   userId?: string | null;
-  /** Whether this listing is already saved — passed from parent to avoid per-card DB fetch */
   isSaved?: boolean;
-  /** Called when the user un-saves this listing (useful for removing it from a saved list) */
   onUnsave?: () => void;
 };
 
@@ -56,13 +54,8 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export default function ListingCard({
-  listing,
-  userId,
-  isSaved,
-  onUnsave,
-}: ListingCardProps) {
-  const _cat = unwrap(listing.categories) || unwrap(listing.category);
+export default function ListingCard({ listing }: ListingCardProps) {
+  const cat = unwrap(listing.categories) || unwrap(listing.category);
   const loc = unwrap(listing.locations) || unwrap(listing.location);
 
   const imageSrc =
@@ -83,6 +76,12 @@ export default function ListingCard({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
         />
 
+        {cat?.icon && (
+          <span className="absolute top-2.5 right-2.5 bg-white/90 backdrop-blur-sm text-gray-800 text-sm w-7 h-7 flex items-center justify-center rounded-full shadow-sm z-10">
+            {cat.icon}
+          </span>
+        )}
+
         {listing.is_promoted && (
           <span className="absolute top-2.5 left-2.5 bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">
             Featured
@@ -102,18 +101,7 @@ export default function ListingCard({
           </div>
         )}
 
-        <FavoriteButton
-          listingId={listing.id}
-          userId={userId}
-          initialSaved={isSaved}
-          onToggle={
-            onUnsave
-              ? (saved) => {
-                  if (!saved) onUnsave();
-                }
-              : undefined
-          }
-        />
+        <FavoriteButton listingId={listing.id} />
 
         <div className="absolute bottom-2 right-2 flex gap-1.5">
           <span className="flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
@@ -130,6 +118,12 @@ export default function ListingCard({
         <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-2.5">
           <MapPin className="w-3 h-3 shrink-0" />
           <span>{loc?.name || "Cyprus"}</span>
+          {cat?.name && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span className="truncate">{cat.name}</span>
+            </>
+          )}
           {listing.condition && (
             <>
               <span className="text-gray-300">·</span>

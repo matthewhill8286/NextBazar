@@ -1,19 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { MessageCircle, Loader2, Search } from "lucide-react";
+import {
+  MessageCircle,
+  Loader2,
+  Search,
+  Pin,
+  PinOff,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
+
+type Conversation = {
+  id: string;
+  buyer_id: string;
+  seller_id: string;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  is_pinned: boolean;
+  listings: { id: string; title: string; slug: string; primary_image_url: string | null } | null;
+  buyer: { id: string; display_name: string | null; avatar_url: string | null } | null;
+  seller: { id: string; display_name: string | null; avatar_url: string | null } | null;
+};
 
 export default function MessagesPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const loadConversations = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from("conversations")
+      .select(
+        `
+        id, buyer_id, seller_id, last_message_at, last_message_preview, is_pinned,
+        listings(id, title, slug, primary_image_url),
+        buyer:profiles!conversations_buyer_id_fkey(id, display_name, avatar_url),
+        seller:profiles!conversations_seller_id_fkey(id, display_name, avatar_url)
+      `,
+      )
+      .or(`buyer_id.eq.${uid},seller_id.eq.${uid}`)
+      .order("is_pinned", { ascending: false })
+      .order("last_message_at", { ascending: false, nullsFirst: false });
+
+    setConversations((data as unknown as Conversation[]) || []);
+  }, [supabase]);
 
   useEffect(() => {
     async function load() {
@@ -25,63 +64,65 @@ export default function MessagesPage() {
         return;
       }
       setUserId(user.id);
-
-      const { data } = await supabase
-        .from("conversations")
-        .select(
-          `
-          *,
-          listings(id, title, slug, primary_image_url),
-          buyer:profiles!conversations_buyer_id_fkey(id, display_name, avatar_url),
-          seller:profiles!conversations_seller_id_fkey(id, display_name, avatar_url)
-        `,
-        )
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order("last_message_at", { ascending: false, nullsFirst: false });
-
-      setConversations(data || []);
+      await loadConversations(user.id);
       setLoading(false);
     }
     load();
   }, []);
 
-  // Subscribe to new conversations
+  // Realtime: refresh list when conversations change
   useEffect(() => {
     if (!userId) return;
-
     const channel = supabase
-      .channel("conversations-updates")
+      .channel("conversations-list")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "conversations",
-          filter: `buyer_id=eq.${userId}`,
-        },
-        () => {
-          // Refresh conversations list
-          window.location.reload();
-        },
+        { event: "*", schema: "public", table: "conversations", filter: `buyer_id=eq.${userId}` },
+        () => loadConversations(userId),
       )
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "conversations",
-          filter: `seller_id=eq.${userId}`,
-        },
-        () => {
-          window.location.reload();
-        },
+        { event: "*", schema: "public", table: "conversations", filter: `seller_id=eq.${userId}` },
+        () => loadConversations(userId),
       )
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadConversations]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
+  // Close menu on outside click
+  useEffect(() => {
+    function close() { setActiveMenu(null); }
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
+  async function handlePin(conv: Conversation, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveMenu(null);
+    const next = !conv.is_pinned;
+    // Optimistic
+    setConversations((prev) =>
+      prev
+        .map((c) => (c.id === conv.id ? { ...c, is_pinned: next } : c))
+        .sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+          const aT = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+          const bT = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+          return bT - aT;
+        }),
+    );
+    await supabase.from("conversations").update({ is_pinned: next }).eq("id", conv.id);
+  }
+
+  async function handleDelete(conv: Conversation, e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveMenu(null);
+    if (!confirm("Delete this conversation? This cannot be undone.")) return;
+    setConversations((prev) => prev.filter((c) => c.id !== conv.id));
+    await supabase.from("conversations").delete().eq("id", conv.id);
+  }
 
   function timeAgo(d: string | null) {
     if (!d) return "";
@@ -97,8 +138,7 @@ export default function MessagesPage() {
   const filtered = conversations.filter((c) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    const otherUser =
-      c.buyer_id === userId ? c.seller : c.buyer;
+    const otherUser = c.buyer_id === userId ? c.seller : c.buyer;
     return (
       otherUser?.display_name?.toLowerCase().includes(q) ||
       c.listings?.title?.toLowerCase().includes(q) ||
@@ -134,8 +174,7 @@ export default function MessagesPage() {
       {filtered.length > 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-50 overflow-hidden">
           {filtered.map((conv) => {
-            const otherUser =
-              conv.buyer_id === userId ? conv.seller : conv.buyer;
+            const otherUser = conv.buyer_id === userId ? conv.seller : conv.buyer;
             const initials =
               otherUser?.display_name
                 ?.split(" ")
@@ -143,59 +182,114 @@ export default function MessagesPage() {
                 .join("")
                 .toUpperCase()
                 .slice(0, 2) || "?";
+            const menuOpen = activeMenu === conv.id;
 
             return (
-              <Link
-                key={conv.id}
-                href={`/messages/${conv.id}`}
-                className="flex items-center gap-3.5 p-4 hover:bg-gray-50 transition-colors"
-              >
-                {/* Avatar */}
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                  {otherUser?.avatar_url ? (
-                    <img
-                      src={otherUser.avatar_url}
-                      alt=""
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    initials
+              <div key={conv.id} className="relative group">
+                <Link
+                  href={`/messages/${conv.id}`}
+                  className="flex items-center gap-3.5 p-4 hover:bg-gray-50 transition-colors"
+                >
+                  {/* Pin indicator strip */}
+                  {conv.is_pinned && (
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400 rounded-l" />
                   )}
-                </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-semibold text-gray-900 text-sm truncate">
-                      {otherUser?.display_name || "User"}
-                    </span>
-                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
-                      {timeAgo(conv.last_message_at)}
-                    </span>
+                  {/* Avatar */}
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    {otherUser?.avatar_url ? (
+                      <img
+                        src={otherUser.avatar_url}
+                        alt=""
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
                   </div>
-                  {conv.listings?.title && (
-                    <p className="text-xs text-blue-600 truncate mb-0.5">
-                      Re: {conv.listings.title}
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-900 text-sm truncate">
+                          {otherUser?.display_name || "User"}
+                        </span>
+                        {conv.is_pinned && (
+                          <Pin className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                        {timeAgo(conv.last_message_at)}
+                      </span>
+                    </div>
+                    {conv.listings?.title && (
+                      <p className="text-xs text-blue-600 truncate mb-0.5">
+                        Re: {conv.listings.title}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500 truncate">
+                      {conv.last_message_preview || "No messages yet"}
                     </p>
-                  )}
-                  <p className="text-sm text-gray-500 truncate">
-                    {conv.last_message_preview || "No messages yet"}
-                  </p>
-                </div>
-
-                {/* Listing thumbnail */}
-                {conv.listings?.primary_image_url && (
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
-                    <Image
-                      src={conv.listings.primary_image_url}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="40px"
-                    />
                   </div>
-                )}
-              </Link>
+
+                  {/* Listing thumbnail */}
+                  {conv.listings?.primary_image_url && (
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                      <Image
+                        src={conv.listings.primary_image_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    </div>
+                  )}
+                </Link>
+
+                {/* ⋯ Actions menu */}
+                <div
+                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveMenu(menuOpen ? null : conv.id);
+                      }}
+                      className="p-1.5 rounded-lg bg-white border border-gray-100 shadow-sm hover:bg-gray-50 text-gray-500 transition-colors"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+
+                    {menuOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-100 rounded-xl shadow-lg py-1 min-w-[160px]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={(e) => handlePin(conv, e)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          {conv.is_pinned ? (
+                            <><PinOff className="w-3.5 h-3.5 text-amber-500" /> Unpin conversation</>
+                          ) : (
+                            <><Pin className="w-3.5 h-3.5 text-amber-500" /> Pin conversation</>
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(conv, e)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete conversation
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>

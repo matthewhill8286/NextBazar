@@ -2,77 +2,41 @@
 
 import { Heart, MessageCircle, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useSaved } from "@/lib/saved-context";
 import UserMenu from "./user-menu";
 
 export default function Navbar() {
-  const _pathname = usePathname();
   const supabase = createClient();
+  const { count: savedCount } = useSaved();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
-    async function loadCounts() {
+    async function loadUnread() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Count unread messages aren't sent by me
-      const { count: msgCount } = await supabase
+      const { count } = await supabase
         .from("messages")
         .select("id", { count: "exact", head: true })
         .neq("sender_id", user.id)
         .is("read_at", null);
 
-      setUnreadCount(msgCount || 0);
-
-      // Count saved/favorited listings (PK is user_id+listing_id, no id column)
-      const { count: favCount } = await supabase
-        .from("favorites")
-        .select("user_id", { count: "exact", head: true })
-        .eq("user_id", user.id);
-
-      setSavedCount(favCount || 0);
+      setUnreadCount(count || 0);
     }
-    loadCounts();
+    loadUnread();
 
-    // Listen for new messages
     const channel = supabase
       .channel("nav-unread")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        () => loadCounts(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "messages" },
-        () => loadCounts(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "favorites" },
-        () => loadCounts(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "favorites" },
-        () => loadCounts(),
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, loadUnread)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, loadUnread)
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [
-    supabase.from,
-    supabase.channel,
-    supabase.auth.getUser,
-    supabase.removeChannel,
-  ]);
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -128,7 +92,7 @@ export default function Navbar() {
             <MessageCircle className="w-4 h-4" />
             <span className="hidden lg:inline">Messages</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold w-4.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full">
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}

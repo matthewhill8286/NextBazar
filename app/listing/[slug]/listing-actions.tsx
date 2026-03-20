@@ -3,6 +3,7 @@
 import { Check, Flag, Heart, Loader2, Share2, X } from "lucide-react";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useSaved } from "@/lib/saved-context";
 
 const REPORT_REASONS: { value: string; label: string }[] = [
   { value: "scam",           label: "Scam or fraud" },
@@ -15,38 +16,19 @@ const REPORT_REASONS: { value: string; label: string }[] = [
 ];
 
 export function FavoriteAction({ listingId }: { listingId: string }) {
-  const [saved, setSaved] = useState(false);
+  const { isSaved, toggle } = useSaved();
   const [animating, setAnimating] = useState(false);
-  const supabase = createClient();
+  const saved = isSaved(listingId);
 
-  async function toggle() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = `/auth/login?redirect=/listing/${listingId}`;
-      return;
-    }
-
+  async function handleToggle() {
     setAnimating(true);
-    if (saved) {
-      await supabase
-        .from("favorites")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("listing_id", listingId);
-    } else {
-      await supabase
-        .from("favorites")
-        .insert({ user_id: user.id, listing_id: listingId });
-    }
-    setSaved(!saved);
+    await toggle(listingId);
     setTimeout(() => setAnimating(false), 300);
   }
 
   return (
     <button
-      onClick={toggle}
+      onClick={handleToggle}
       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
         saved
           ? "bg-red-50 border-red-200 text-red-600"
