@@ -81,7 +81,7 @@ export default function HomeClient() {
           <h1 className="text-4xl md:text-6xl font-extrabold mb-5 tracking-tight leading-[1.1]">
             Buy &amp; Sell{" "}
             <span className="relative inline-block">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-300">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-amber-300 to-orange-300">
                 Anything
               </span>
             </span>{" "}
@@ -99,7 +99,7 @@ export default function HomeClient() {
               <div className="w-full pl-14 pr-36 py-4 rounded-2xl bg-white text-gray-400 text-base shadow-2xl shadow-indigo-900/30 group-hover:shadow-indigo-900/50 transition-shadow text-left">
                 What are you looking for?
               </div>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md group-hover:from-blue-600 group-hover:to-indigo-700 transition-all">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-linear-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md group-hover:from-blue-600 group-hover:to-indigo-700 transition-all">
                 Search
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function HomeClient() {
               <div className="flex items-center gap-3">
                 <div className="w-1 h-6 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
                 <h2 className="text-xl font-bold text-gray-900">Featured Listings</h2>
-                <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                <span className="bg-linear-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">
                   Promoted
                 </span>
               </div>
@@ -233,7 +233,7 @@ export default function HomeClient() {
               <div className="text-5xl mb-4">🏪</div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Be the first to post!</h3>
               <p className="text-gray-400 mb-6">The marketplace is waiting for listings</p>
-              <Link href="/post" className="inline-flex bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-200">
+              <Link href="/post" className="inline-flex bg-linear-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md shadow-blue-200">
                 Post Your First Ad
               </Link>
             </div>
@@ -267,7 +267,7 @@ export default function HomeClient() {
               ))}
             </div>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/post" className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-7 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-900/30">
+              <Link href="/post" className="bg-linear-to-r from-blue-500 to-indigo-600 text-white px-7 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg shadow-blue-900/30">
                 Post a Free Ad
               </Link>
               <Link href="/search" className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-7 py-3 rounded-xl font-semibold hover:bg-white/20 transition-colors">

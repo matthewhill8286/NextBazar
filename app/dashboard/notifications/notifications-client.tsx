@@ -149,7 +149,7 @@ export default function NotificationsClient({
               >
                 {/* Icon */}
                 <div
-                  className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5`}
+                  className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center shrink-0 mt-0.5`}
                 >
                   {icon}
                 </div>
@@ -162,7 +162,7 @@ export default function NotificationsClient({
                     >
                       {n.title}
                     </p>
-                    <span className="text-xs text-gray-400 flex-shrink-0 mt-0.5">
+                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
                       {timeAgo(n.created_at)}
                     </span>
                   </div>
@@ -174,7 +174,7 @@ export default function NotificationsClient({
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   {!n.read && (
                     <button
                       onClick={(e) => {
@@ -203,7 +203,7 @@ export default function NotificationsClient({
 
                 {/* Unread dot */}
                 {!n.read && (
-                  <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5" />
+                  <div className="w-2 h-2 bg-blue-600 rounded-full shrink-0 mt-1.5" />
                 )}
               </div>
             );

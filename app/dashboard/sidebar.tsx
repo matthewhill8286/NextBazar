@@ -59,7 +59,7 @@ export default function DashboardSidebar({ profile, stats, isAdmin }: SidebarPro
       {/* Profile Card */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
             {profile.avatar_url ? (
               <img
                 src={profile.avatar_url}
@@ -76,7 +76,7 @@ export default function DashboardSidebar({ profile, stats, isAdmin }: SidebarPro
                 {profile.display_name}
               </p>
               {profile.verified && (
-                <Shield className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                <Shield className="w-4 h-4 text-blue-500 shrink-0" />
               )}
             </div>
             <p className="text-xs text-gray-500 truncate">{profile.email}</p>

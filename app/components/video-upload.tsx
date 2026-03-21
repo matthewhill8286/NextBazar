@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Play, Upload, Video, X } from "lucide-react";
+import { Loader2, Play, Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -15,13 +15,13 @@ export type UploadedVideo = {
 type VideoUploadProps = {
   userId: string;
   video: UploadedVideo | null;
-  onChange: (video: UploadedVideo | null) => void;
+  onChangeAction: (video: UploadedVideo | null) => void;
 };
 
 const MAX_SIZE_MB = 200;
 const ACCEPTED = ["video/mp4", "video/quicktime", "video/webm", "video/mov"];
 
-export default function VideoUpload({ userId, video, onChange }: VideoUploadProps) {
+export default function VideoUpload({ userId, video, onChangeAction }: VideoUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const supabase = createClient();
@@ -38,13 +38,13 @@ export default function VideoUpload({ userId, video, onChange }: VideoUploadProp
 
     const previewUrl = URL.createObjectURL(file);
     const draft: UploadedVideo = { file, previewUrl, uploading: true, progress: 0 };
-    onChange(draft);
+    onChangeAction(draft);
 
     // Simulate early progress pulse while Supabase uploads
     let sim = 0;
     const ticker = setInterval(() => {
       sim = Math.min(sim + Math.random() * 8, 85);
-      onChange({ ...draft, progress: Math.round(sim) });
+      onChangeAction({ ...draft, progress: Math.round(sim) });
     }, 400);
 
     try {
@@ -60,11 +60,11 @@ export default function VideoUpload({ userId, video, onChange }: VideoUploadProp
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage.from("listings").getPublicUrl(path);
-      onChange({ file, previewUrl, url: publicUrl, uploading: false, progress: 100 });
+      onChangeAction({ file, previewUrl, url: publicUrl, uploading: false, progress: 100 });
     } catch (err) {
       clearInterval(ticker);
       console.error("Video upload failed:", err);
-      onChange(null);
+      onChangeAction(null);
       alert("Video upload failed. Please try again.");
     }
   }
@@ -78,7 +78,7 @@ export default function VideoUpload({ userId, video, onChange }: VideoUploadProp
 
   function handleRemove() {
     if (video?.previewUrl) URL.revokeObjectURL(video.previewUrl);
-    onChange(null);
+    onChangeAction(null);
   }
 
   // ── State: has a video ───────────────────────────────────────────────────

@@ -16,7 +16,7 @@ type UploadedImage = {
 type ImageUploadProps = {
   userId: string;
   images: UploadedImage[];
-  onChange: (images: UploadedImage[]) => void;
+  onChangeAction: (images: UploadedImage[]) => void;
   maxImages?: number;
 };
 
@@ -25,7 +25,7 @@ export type { UploadedImage };
 export default function ImageUpload({
   userId,
   images,
-  onChange,
+  onChangeAction,
   maxImages = 15,
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +132,7 @@ export default function ImageUpload({
       }));
 
       const updatedImages = [...images, ...newImages];
-      onChange(updatedImages);
+      onChangeAction(updatedImages);
 
       // Upload each compressed file, updating the list after each completes
       let currentImages = updatedImages;
@@ -143,10 +143,10 @@ export default function ImageUpload({
             ? { ...i, url: url || undefined, uploading: false }
             : i,
         );
-        onChange(currentImages);
+        onChangeAction(currentImages);
       }
     },
-    [images, maxImages, onChange, uploadFile, compressImage],
+    [images, maxImages, onChangeAction, uploadFile, compressImage],
   );
 
   const handleDrop = useCallback(
@@ -164,9 +164,9 @@ export default function ImageUpload({
     (id: string) => {
       const img = images.find((i) => i.id === id);
       if (img?.preview) URL.revokeObjectURL(img.preview);
-      onChange(images.filter((i) => i.id !== id));
+      onChangeAction(images.filter((i) => i.id !== id));
     },
-    [images, onChange],
+    [images, onChangeAction],
   );
 
   return (
@@ -196,7 +196,7 @@ export default function ImageUpload({
           Drag & drop or click to browse. JPG, PNG, WebP — auto-optimised on
           upload.
         </p>
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-full">
+        <div className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-50 to-purple-50 text-indigo-700 text-xs font-medium px-3 py-1.5 rounded-full">
           <Sparkles className="w-3.5 h-3.5" />
           AI will auto-fill details from your photos
         </div>
@@ -207,8 +207,8 @@ export default function ImageUpload({
           accept="image/jpeg,image/png,image/webp"
           multiple
           className="hidden"
-          onChange={(e) => {
-            if (e.target.files) handleFiles(e.target.files);
+          onChange={async (e) => {
+            if (e.target.files) await handleFiles(e.target.files);
             e.target.value = "";
           }}
         />

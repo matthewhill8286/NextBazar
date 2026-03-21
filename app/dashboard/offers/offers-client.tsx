@@ -74,7 +74,7 @@ function Avatar({
     .toUpperCase()
     .slice(0, 2);
   return (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0 overflow-hidden">
       {avatarUrl ? (
         <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
       ) : (
@@ -135,7 +135,7 @@ function OfferCard({
         onClick={() => setExpanded(!expanded)}
       >
         {/* Listing thumbnail */}
-        <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 relative">
+        <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 shrink-0 relative">
           {listing?.primary_image_url ? (
             <Image
               src={listing.primary_image_url}
@@ -178,7 +178,7 @@ function OfferCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <span
             className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.text}`}
           >

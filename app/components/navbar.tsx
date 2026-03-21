@@ -52,12 +52,12 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
 
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 flex-shrink-0 group">
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-md shadow-blue-200 group-hover:shadow-blue-300 transition-shadow">
             N
           </div>
           <span className="font-extrabold text-xl text-gray-900 hidden sm:block tracking-tight">
-            Next<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Bazar</span>
+            Next<span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-indigo-600">Bazar</span>
           </span>
         </Link>
 
@@ -74,7 +74,7 @@ export default function Navbar() {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <Link
             href="/search"
             className="md:hidden p-2.5 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
@@ -123,7 +123,7 @@ export default function Navbar() {
 
           <Link
             href="/post"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-1.5 shadow-md shadow-blue-200 hover:shadow-lg hover:shadow-blue-300"
+            className="bg-linear-to-r from-blue-600 to-indigo-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-1.5 shadow-md shadow-blue-200 hover:shadow-lg hover:shadow-blue-300"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Post Ad</span>

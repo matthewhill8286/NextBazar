@@ -13,10 +13,10 @@ type Props = {
   listingId: string;
   promotionType: "featured" | "urgent";
   /** Called when the user closes the modal without paying */
-  onClose: () => void;
+  onCloseAction: () => void;
 };
 
-export default function StripeCheckoutModal({ listingId, promotionType, onClose }: Props) {
+export default function StripeCheckoutModal({ listingId, promotionType, onCloseAction }: Props) {
   const fetchClientSecret = useCallback(async () => {
     const res = await fetch("/api/checkout", {
       method: "POST",
@@ -48,7 +48,7 @@ export default function StripeCheckoutModal({ listingId, promotionType, onClose 
             <p className="text-xs text-gray-400 mt-0.5">Secure payment powered by Stripe</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={onCloseAction}
             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
           >
             <X className="w-4 h-4" />

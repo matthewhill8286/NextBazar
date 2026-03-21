@@ -305,7 +305,7 @@ export default function PostClient() {
             <ImageUpload
               userId={userId}
               images={images}
-              onChange={handleImagesChange}
+              onChangeAction={handleImagesChange}
             />
           ) : (
             <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center bg-white">
@@ -327,7 +327,7 @@ export default function PostClient() {
               type="button"
               onClick={handleAiAutofill}
               disabled={aiLoading}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-md shadow-indigo-200"
+              className="w-full bg-linear-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-md shadow-indigo-200"
             >
               {aiLoading ? (
                 <>
@@ -635,7 +635,7 @@ export default function PostClient() {
                       key={i}
                       className="flex items-start gap-2 text-xs text-indigo-700"
                     >
-                      <Lightbulb className="w-3 h-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <Lightbulb className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
                       {tip}
                     </div>
                   ))}
@@ -699,7 +699,7 @@ export default function PostClient() {
             <h3 className="text-sm font-medium text-gray-500 mb-3">Preview</h3>
             <div className="flex gap-4">
               {images[0] && (
-                <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gray-100">
                   <img
                     src={images[0].preview}
                     alt=""
@@ -752,7 +752,7 @@ export default function PostClient() {
               className={`w-full text-left rounded-xl border-2 p-5 transition-all relative ${
                 selectedPackage === "featured"
                   ? "border-amber-400 bg-amber-50/60 ring-2 ring-amber-100"
-                  : "border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 hover:border-amber-400"
+                  : "border-amber-300 bg-linear-to-r from-amber-50 to-orange-50 hover:border-amber-400"
               }`}
             >
               <div className="absolute -top-2.5 right-4 bg-amber-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
@@ -768,7 +768,7 @@ export default function PostClient() {
                     views
                   </div>
                 </div>
-                <div className="font-bold text-amber-600 ml-4 flex-shrink-0">
+                <div className="font-bold text-amber-600 ml-4 shrink-0">
                   €4.99
                 </div>
               </div>
@@ -794,7 +794,7 @@ export default function PostClient() {
                     views
                   </div>
                 </div>
-                <div className="font-bold text-red-600 ml-4 flex-shrink-0">
+                <div className="font-bold text-red-600 ml-4 shrink-0">
                   €2.99
                 </div>
               </div>
@@ -815,7 +815,7 @@ export default function PostClient() {
                   INCLUDED
                 </span>
               </div>
-              <VideoUpload userId={userId} video={video} onChange={setVideo} />
+              <VideoUpload userId={userId} video={video} onChangeAction={setVideo} />
             </div>
           )}
 
@@ -864,7 +864,7 @@ export default function PostClient() {
         <StripeCheckoutModal
           listingId={checkoutListing.id}
           promotionType={selectedPackage as "featured" | "urgent"}
-          onClose={() => {
+          onCloseAction={() => {
             // User dismissed without paying — go to listing (it's live, just unpromoted)
             router.push(`/listing/${checkoutListing.slug}`);
           }}

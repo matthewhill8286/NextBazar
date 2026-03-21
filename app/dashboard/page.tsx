@@ -147,7 +147,7 @@ export default function DashboardPage() {
                 key={listing.id}
                 className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative">
                   {listing.primary_image_url ? (
                     <Image
                       src={listing.primary_image_url}
@@ -175,10 +175,10 @@ export default function DashboardPage() {
                     <span>{timeAgo(listing.created_at)}</span>
                   </div>
                 </div>
-                <div className="text-sm font-semibold text-gray-900 flex-shrink-0">
+                <div className="text-sm font-semibold text-gray-900 shrink-0">
                   {formatPrice(listing.price, listing.currency)}
                 </div>
-                <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
+                <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 shrink-0">
                   <span className="flex items-center gap-1">
                     <Eye className="w-3 h-3" /> {listing.view_count || 0}
                   </span>
@@ -187,7 +187,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <span
-                  className={`text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0 ${
+                  className={`text-[10px] font-semibold px-2 py-1 rounded-full shrink-0 ${
                     listing.status === "active"
                       ? "bg-green-50 text-green-700"
                       : listing.status === "sold"
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                 </span>
                 <Link
                   href={`/dashboard/edit/${listing.id}`}
-                  className="text-xs text-blue-600 font-medium hover:underline flex-shrink-0"
+                  className="text-xs text-blue-600 font-medium hover:underline shrink-0"
                 >
                   Edit
                 </Link>

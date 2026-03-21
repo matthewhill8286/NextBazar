@@ -159,7 +159,7 @@ export default function AdminReportsPage() {
                 <Link
                   href={`/listing/${report.listing?.slug || "#"}`}
                   target="_blank"
-                  className="w-20 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative hover:opacity-80 transition-opacity"
+                  className="w-20 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative hover:opacity-80 transition-opacity"
                 >
                   {report.listing?.primary_image_url ? (
                     <Image src={report.listing.primary_image_url} alt="" fill className="object-cover" sizes="80px" />
@@ -186,7 +186,7 @@ export default function AdminReportsPage() {
                         className="font-medium text-gray-900 hover:text-blue-600 flex items-center gap-1 text-sm"
                       >
                         {report.listing?.title || "Deleted listing"}
-                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        <ExternalLink className="w-3 h-3 shrink-0" />
                       </Link>
                       <p className="text-xs text-gray-400 mt-0.5">
                         Reported by {report.reporter?.display_name || "Anonymous"} · {timeAgo(report.created_at)}

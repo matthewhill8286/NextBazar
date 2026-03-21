@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ListingCard from "@/app/components/listing-card";
 import { createClient } from "@/lib/supabase/client";
-import AiInsights, { type InsightsPriceSummary } from "./ai-insights";
+import AiInsights, { type InsightsPriceSummaryAction } from "./ai-insights";
 import ImageGallery from "./image-gallery";
 import {
   ContactButtons,
@@ -80,7 +80,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
   const [related, setRelated] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [aiPrice, setAiPrice] = useState<InsightsPriceSummary | null>(null);
+  const [aiPrice, setAiPrice] = useState<InsightsPriceSummaryAction | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showOfferModal, setShowOfferModal] = useState(false);
 
@@ -450,7 +450,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
 
             {/* AI Insights — owner only */}
             {isOwner && (
-              <AiInsights listingId={listing.id} onInsights={setAiPrice} />
+              <AiInsights listingId={listing.id} onInsightsAction={setAiPrice} />
             )}
 
             {/* Price History */}
@@ -623,7 +623,7 @@ export default function ListingDetail({ slug }: { slug: string }) {
         listingTitle={listing.title}
         listingPrice={listing.price}
         currency={listing.currency || "EUR"}
-        onClose={() => setShowOfferModal(false)}
+        onCloseAction={() => setShowOfferModal(false)}
       />
     )}
     </>

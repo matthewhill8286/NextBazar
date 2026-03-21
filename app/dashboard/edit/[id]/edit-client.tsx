@@ -186,7 +186,7 @@ export default function EditClient({ listing }: { listing: ListingData }) {
         <ImageUpload
           userId={listing.user_id}
           images={images}
-          onChange={handleImagesChange}
+          onChangeAction={handleImagesChange}
         />
 
         {/* Video Tour — promoted listings only */}
@@ -203,7 +203,7 @@ export default function EditClient({ listing }: { listing: ListingData }) {
                 PAID FEATURE
               </span>
             </div>
-            <VideoUpload userId={listing.user_id} video={video} onChange={setVideo} />
+            <VideoUpload userId={listing.user_id} video={video} onChangeAction={setVideo} />
           </div>
         )}
 

@@ -115,7 +115,7 @@ export function LeaveReviewPrompt({
   if (alreadyReviewed || done) {
     return (
       <div className="bg-green-50 border border-green-100 rounded-2xl p-5 flex items-center gap-3">
-        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+        <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
         <p className="text-sm text-green-800 font-medium">
           {done ? "Thanks for your review!" : "You've already reviewed this seller"}
         </p>
@@ -236,7 +236,7 @@ export function SellerReviews({
           return (
             <div key={star} className="flex items-center gap-2 text-xs">
               <span className="w-2 text-gray-500">{star}</span>
-              <Star className="w-3 h-3 fill-amber-400 stroke-amber-400 flex-shrink-0" />
+              <Star className="w-3 h-3 fill-amber-400 stroke-amber-400 shrink-0" />
               <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-amber-400 rounded-full transition-all duration-500"
@@ -262,7 +262,7 @@ export function SellerReviews({
 
           return (
             <div key={review.id} className="flex gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold shrink-0 overflow-hidden">
                 {review.reviewer?.avatar_url ? (
                   <img
                     src={review.reviewer.avatar_url}
@@ -278,7 +278,7 @@ export function SellerReviews({
                   <span className="text-sm font-medium text-gray-900 truncate">
                     {review.reviewer?.display_name || "Anonymous"}
                   </span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">
+                  <span className="text-xs text-gray-400 shrink-0">
                     {timeAgo(review.created_at)}
                   </span>
                 </div>

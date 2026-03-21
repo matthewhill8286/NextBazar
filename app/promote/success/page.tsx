@@ -120,8 +120,8 @@ function SuccessContent() {
         <div
           className={`rounded-2xl p-5 border mb-8 ${
             isFeatured
-              ? "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
-              : "bg-gradient-to-r from-red-50 to-rose-50 border-red-200"
+              ? "bg-linear-to-r from-amber-50 to-orange-50 border-amber-200"
+              : "bg-linear-to-r from-red-50 to-rose-50 border-red-200"
           }`}
         >
           <div className={`flex items-center justify-center gap-2 font-semibold mb-1 ${isFeatured ? "text-amber-800" : "text-red-700"}`}>
