@@ -200,7 +200,7 @@ export default function MessagesPage() {
                   className="flex items-center gap-3.5 p-4 flex-1 min-w-0"
                 >
                   {/* Avatar */}
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0">
                     {otherUser?.avatar_url ? (
                       <img
                         src={otherUser.avatar_url}
@@ -220,10 +220,10 @@ export default function MessagesPage() {
                           {otherUser?.display_name || "User"}
                         </span>
                         {conv.is_pinned && (
-                          <Pin className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                          <Pin className="w-3 h-3 text-amber-500 shrink-0" />
                         )}
                       </div>
-                      <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                      <span className="text-xs text-gray-400 shrink-0 ml-2">
                         {timeAgo(conv.last_message_at)}
                       </span>
                     </div>
@@ -239,7 +239,7 @@ export default function MessagesPage() {
 
                   {/* Listing thumbnail */}
                   {conv.listings?.primary_image_url && (
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative">
                       <Image
                         src={conv.listings.primary_image_url}
                         alt=""
@@ -252,7 +252,7 @@ export default function MessagesPage() {
                 </Link>
 
                 {/* ⋯ Actions menu — flex sibling, right of thumbnail */}
-                <div className="pr-3 flex-shrink-0 relative">
+                <div className="pr-3 shrink-0 relative">
                   <button
                     onClick={() => setActiveMenu(menuOpen ? null : conv.id)}
                     className="p-1.5 rounded-lg bg-white border border-gray-100 shadow-sm hover:bg-gray-50 text-gray-500 transition-colors"

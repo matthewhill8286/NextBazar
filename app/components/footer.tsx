@@ -12,7 +12,7 @@ export default function Footer() {
                 N
               </div>
               <span className="font-extrabold text-white text-lg tracking-tight">
-                Next<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Bazar</span>
+                Next<span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-indigo-400">Bazar</span>
               </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-500 max-w-[200px]">

@@ -48,7 +48,6 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
   const supabase = createClient();
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState<string | null>(null);
   const [selected, setSelected] = useState("featured");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
@@ -109,7 +108,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
       {listing && (
         <div className="bg-white rounded-xl border border-gray-100 p-4 mb-8 flex items-center gap-4">
           {listing.primary_image_url && (
-            <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+            <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative">
               <Image
                 src={listing.primary_image_url}
                 alt=""
@@ -129,7 +128,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
                 : "Contact for price"}
             </p>
           </div>
-          <div className="flex gap-1.5 flex-shrink-0">
+          <div className="flex gap-1.5 shrink-0">
             {listing.is_promoted && (
               <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
                 Featured
@@ -145,7 +144,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
       )}
 
       {/* Stats callout */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 mb-8">
+      <div className="bg-linear-to-r from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-100 mb-8">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp className="w-5 h-5 text-blue-600" />
           <span className="font-semibold text-blue-900">
@@ -216,7 +215,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
                     key={i}
                     className="flex items-center gap-1.5 text-xs text-gray-600"
                   >
-                    <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
+                    <Check className="w-3 h-3 text-green-500 shrink-0" />
                     {b}
                   </div>
                 ))}
@@ -244,7 +243,7 @@ export default function PromoteClient({ listingId }: { listingId: string }) {
         <StripeCheckoutModal
           listingId={listing.id}
           promotionType={selected as "featured" | "urgent"}
-          onClose={() => setCheckoutOpen(false)}
+          onCloseAction={() => setCheckoutOpen(false)}
         />
       )}
     </div>

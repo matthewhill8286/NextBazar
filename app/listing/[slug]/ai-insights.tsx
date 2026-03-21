@@ -25,7 +25,7 @@ type InsightsData = {
   };
 };
 
-export type InsightsPriceSummary = {
+export type InsightsPriceSummaryAction = {
   price_low: number;
   price_high: number;
   price_verdict: string;
@@ -34,17 +34,17 @@ export type InsightsPriceSummary = {
 
 export default function AiInsights({
   listingId,
-  onInsights,
+  onInsightsAction,
 }: {
   listingId: string;
-  onInsights?: (summary: InsightsPriceSummary) => void;
+  onInsightsAction?: (summary: InsightsPriceSummaryAction) => void;
 }) {
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    onInsights?.({ price_low: 0, price_high: 0, price_verdict: "", loading: true });
+    onInsightsAction?.({ price_low: 0, price_high: 0, price_verdict: "", loading: true });
     async function load() {
       try {
         const res = await fetch("/api/ai/insights", {
@@ -55,7 +55,7 @@ export default function AiInsights({
         if (!res.ok) throw new Error();
         const result: InsightsData = await res.json();
         setData(result);
-        onInsights?.({
+        onInsightsAction?.({
           price_low: result.insights.price_low,
           price_high: result.insights.price_high,
           price_verdict: result.insights.price_verdict,
@@ -63,7 +63,7 @@ export default function AiInsights({
         });
       } catch {
         setError(true);
-        onInsights?.({ price_low: 0, price_high: 0, price_verdict: "", loading: false });
+        onInsightsAction?.({ price_low: 0, price_high: 0, price_verdict: "", loading: false });
       }
       setLoading(false);
     }
@@ -227,7 +227,7 @@ export default function AiInsights({
       {/* Top tip */}
       {insights.top_tip && (
         <div className="bg-white/60 rounded-xl p-3.5 flex items-start gap-2.5">
-          <Lightbulb className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+          <Lightbulb className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
           <div>
             <span className="text-xs font-semibold text-gray-700">
               Pro Tip:{" "}

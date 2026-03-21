@@ -10,7 +10,7 @@ type Props = {
   listingTitle: string;
   listingPrice: number | null;
   currency: string;
-  onClose: () => void;
+  onCloseAction: () => void;
 };
 
 export default function MakeOfferModal({
@@ -19,7 +19,7 @@ export default function MakeOfferModal({
   listingTitle,
   listingPrice,
   currency,
-  onClose,
+  onCloseAction,
 }: Props) {
   const supabase = createClient();
   const sym = currency === "EUR" ? "€" : currency;
@@ -83,7 +83,7 @@ export default function MakeOfferModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">Make an Offer</h2>
           <button
-            onClick={onClose}
+            onClick={onCloseAction}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-400"
           >
             <X className="w-5 h-5" />
@@ -108,7 +108,7 @@ export default function MakeOfferModal({
               they respond.
             </p>
             <button
-              onClick={onClose}
+              onClick={onCloseAction}
               className="px-6 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors"
             >
               Done
@@ -193,7 +193,7 @@ export default function MakeOfferModal({
 
             {errorMsg && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 {errorMsg}
               </div>
             )}
@@ -201,7 +201,7 @@ export default function MakeOfferModal({
             <div className="flex gap-3 pt-1">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={onCloseAction}
                 className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
@@ -209,7 +209,7 @@ export default function MakeOfferModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

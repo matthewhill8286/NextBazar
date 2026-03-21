@@ -388,14 +388,14 @@ export default function ChatThread({
   return (
     <div className="max-w-3xl mx-auto flex flex-col" style={{ height: "calc(100vh - 80px)" }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 shrink-0">
         <Link
           href="/messages"
           className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
+        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0">
           {otherUser?.avatar_url ? (
             <img src={otherUser.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (
@@ -418,7 +418,7 @@ export default function ChatThread({
         {listing?.primary_image_url && (
           <Link
             href={`/listing/${listing.slug}`}
-            className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative hover:opacity-80 transition-opacity"
+            className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative hover:opacity-80 transition-opacity"
           >
             <Image src={listing.primary_image_url} alt="" fill className="object-cover" sizes="40px" />
           </Link>
@@ -426,7 +426,7 @@ export default function ChatThread({
         <button
           onClick={() => setDeleteConvOpen(true)}
           title="Delete conversation"
-          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors shrink-0"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -434,7 +434,7 @@ export default function ChatThread({
 
       {/* Listing info bar */}
       {listing && (
-        <div className="bg-blue-50 border-b border-blue-100 px-4 py-2.5 flex items-center gap-3 flex-shrink-0">
+        <div className="bg-blue-50 border-b border-blue-100 px-4 py-2.5 flex items-center gap-3 shrink-0">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-blue-800 font-medium truncate">{listing.title}</p>
             <p className="text-xs text-blue-600">
@@ -445,7 +445,7 @@ export default function ChatThread({
           </div>
           <Link
             href={`/listing/${listing.slug}`}
-            className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1 flex-shrink-0"
+            className="text-xs text-blue-600 font-medium hover:underline flex items-center gap-1 shrink-0"
           >
             View <ExternalLink className="w-3 h-3" />
           </Link>
@@ -454,13 +454,13 @@ export default function ChatThread({
 
       {/* Pinned messages banner */}
       {pinnedMessages.length > 0 && (
-        <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 flex-shrink-0">
+        <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 shrink-0">
           <button
             onClick={() => setPinnedExpanded((v) => !v)}
             className="w-full text-left"
           >
             <div className="flex items-center gap-2">
-              <Pin className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+              <Pin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span className="text-xs font-semibold text-amber-800">
                 {pinnedMessages.length} pinned {pinnedMessages.length === 1 ? "message" : "messages"}
               </span>
@@ -641,7 +641,7 @@ export default function ChatThread({
 
       {/* Send error banner */}
       {sendError && (
-        <div className="bg-red-50 border-t border-red-100 px-4 py-2 flex items-center justify-between flex-shrink-0">
+        <div className="bg-red-50 border-t border-red-100 px-4 py-2 flex items-center justify-between shrink-0">
           <span className="text-xs text-red-600">Message failed to send. Please try again.</span>
           <button onClick={() => setSendError(false)} className="text-red-400 hover:text-red-600">
             <X className="w-3.5 h-3.5" />
@@ -650,7 +650,7 @@ export default function ChatThread({
       )}
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-100 px-4 py-3 flex-shrink-0">
+      <div className="bg-white border-t border-gray-100 px-4 py-3 shrink-0">
         <div className="flex items-end gap-2">
           <textarea
             ref={inputRef}
@@ -665,7 +665,7 @@ export default function ChatThread({
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
-            className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
           >
             {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
