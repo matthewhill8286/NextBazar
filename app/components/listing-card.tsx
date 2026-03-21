@@ -64,7 +64,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
   return (
     <Link
       href={`/listing/${listing.slug}`}
-      className="group bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/80 hover:border-gray-200 hover:-translate-y-1 block"
+      className="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/80 hover:border-gray-200 hover:-translate-y-1 block"
     >
       {/* Image */}
       <div className="relative aspect-4/3 overflow-hidden bg-gray-100">
@@ -77,7 +77,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
         />
 
         {/* Bottom gradient for contrast */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-linear-to-t from-black/40 to-transparent pointer-events-none" />
 
         {/* Category icon */}
         {cat?.icon && (
@@ -88,12 +88,12 @@ export default function ListingCard({ listing }: ListingCardProps) {
 
         {/* Status badges */}
         {listing.is_promoted && (
-          <span className="absolute top-2.5 left-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md z-10 flex items-center gap-1">
+          <span className="absolute top-2.5 left-2.5 bg-linear-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md z-10 flex items-center gap-1">
             ✦ Featured
           </span>
         )}
         {listing.is_urgent && !listing.is_promoted && (
-          <span className="absolute top-2.5 left-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md z-10">
+          <span className="absolute top-2.5 left-2.5 bg-linear-to-r from-red-500 to-rose-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md z-10">
             ⚡ Urgent
           </span>
         )}
@@ -146,7 +146,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
 
       {/* Amber accent stripe for featured listings */}
       {listing.is_promoted && (
-        <div className="h-0.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400" />
+        <div className="absolute left-0 bottom-0 right-0 h-0.5 bg-linear-to-r from-amber-400 via-orange-400 to-amber-400" />
       )}
     </Link>
   );
